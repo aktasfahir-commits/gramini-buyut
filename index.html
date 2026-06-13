@@ -10,7 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,6 +23,7 @@
         <div class="brand-text">
           <h1 class="brand-title" id="brand-title">Gramını Büyüt</h1>
           <p class="brand-tagline">Dokunuyorsan Senindir.</p>
+          <p class="brand-greeting hidden" id="brand-greeting"></p>
         </div>
       </div>
     </header>
@@ -71,6 +72,13 @@
             <span class="month-stat-value" id="silver-month-grams">0 gr</span>
           </div>
         </div>
+      </section>
+
+      <section class="start-card hidden" id="start-card">
+        <h2 class="start-card-title">İlk gram</h2>
+        <p class="start-card-text">Büyük birikimler küçük başlangıçlarla oluşur.</p>
+        <p class="start-card-sub">Bugün başlamak için harika bir gün.</p>
+        <p class="start-card-accent">Bir gram yeter. Başlamak için. 🌱</p>
       </section>
 
       <section class="journey-card" id="journey-card">
@@ -234,9 +242,22 @@
       </div>
     </div>
 
+    <!-- İSİM (ilk açılışta bir kez) -->
+    <div id="name-overlay" class="modal-overlay hidden">
+      <div class="modal modal-compact">
+        <span class="name-emoji" aria-hidden="true">🌱</span>
+        <h3 class="modal-title">Adın nedir?</h3>
+        <p class="modal-lead">Sana sıcak bir şekilde hitap edebilmek için.</p>
+        <form id="name-form" class="name-form">
+          <input type="text" id="name-input" class="text-input" maxlength="40" placeholder="Adın" autocomplete="given-name">
+          <button type="submit" class="btn btn-primary btn-block">Başla</button>
+        </form>
+      </div>
+    </div>
+
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

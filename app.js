@@ -107,7 +107,7 @@ function emptyData() {
   return {
     version: DATA_VERSION,
     records: [],
-    settings: { showEstimatedValue: false },
+    settings: { showEstimatedValue: false, name: null, nameAsked: false },
     priceState: { ...DEFAULT_PRICE_STATE },
   };
 }
@@ -244,7 +244,13 @@ function loadData() {
 
 function normalizeSettings(s) {
   const src = s && typeof s === 'object' ? s : {};
-  return { ...src, showEstimatedValue: src.showEstimatedValue === true };
+  const name = typeof src.name === 'string' && src.name.trim() ? src.name.trim() : null;
+  return {
+    ...src,
+    showEstimatedValue: src.showEstimatedValue === true,
+    name,
+    nameAsked: src.nameAsked === true,
+  };
 }
 
 function normalizePriceState(p) {
@@ -391,9 +397,25 @@ function renderHome() {
   document.getElementById('gold-month-grams').textContent = formatGrams(monthGrams('gold', ym));
   document.getElementById('silver-month-grams').textContent = formatGrams(monthGrams('silver', ym));
 
+  renderGreeting();
   renderGoldPurityBreakdown();
   renderJourney();
   renderMotivation();
+}
+
+// Başlık altında sıcak karşılama: kayıt yoksa "hoş geldin", varsa "devam et".
+function renderGreeting() {
+  const el = document.getElementById('brand-greeting');
+  const name = data.settings.name;
+  if (!name) {
+    el.classList.add('hidden');
+    el.textContent = '';
+    return;
+  }
+  el.textContent = data.records.length
+    ? `${name}, gramını büyütmeye devam et.`
+    : `${name}, hoş geldin.`;
+  el.classList.remove('hidden');
 }
 
 // 24/22/14 ayar kırılımı markup'ı — ana ekran ve Toplam Birikimim ortak kullanır.
@@ -419,18 +441,21 @@ function journeyDurationText(days) {
 
 function renderJourney() {
   const first = firstRecordDate();
+  const journeyCard = document.getElementById('journey-card');
+  const startCard = document.getElementById('start-card');
   const firstEl = document.getElementById('journey-first-date');
   const daysEl = document.getElementById('journey-days');
   const rhythmEl = document.getElementById('journey-rhythm');
 
+  // Henüz kayıt yokken: yolculuk kartını gizle, başlangıç kartını göster.
   if (!first) {
-    firstEl.textContent = 'Henüz yok';
-    document.getElementById('journey-days-label').classList.remove('hidden');
-    daysEl.closest('.journey-row').classList.remove('first-day');
-    daysEl.textContent = 'İlk gramını bekliyoruz';
-    rhythmEl.textContent = '—';
+    journeyCard.classList.add('hidden');
+    startCard.classList.remove('hidden');
     return;
   }
+  // İlk kayıttan sonra başlangıç kartı tamamen kaybolur.
+  startCard.classList.add('hidden');
+  journeyCard.classList.remove('hidden');
 
   firstEl.textContent = formatTurkishDate(first);
 
@@ -813,6 +838,24 @@ function confirmDelete() {
   showToast('Kayıt silindi.');
 }
 
+/* ---------------- İsim (ilk açılışta bir kez) ---------------- */
+function maybeAskName() {
+  if (data.settings.nameAsked) return;
+  const input = document.getElementById('name-input');
+  input.value = '';
+  document.getElementById('name-overlay').classList.remove('hidden');
+  setTimeout(() => input.focus(), 60);
+}
+
+function submitName() {
+  const value = document.getElementById('name-input').value.trim();
+  data.settings.name = value || null;
+  data.settings.nameAsked = true; // boş geçilse de tekrar sorulmaz
+  saveData();
+  document.getElementById('name-overlay').classList.add('hidden');
+  renderGreeting();
+}
+
 /* ---------------- Toast ---------------- */
 function showToast(msg) {
   const el = document.getElementById('toast');
@@ -872,6 +915,11 @@ document.getElementById('history-list').addEventListener('click', (e) => {
   else if (action === 'delete-record') openDeleteModal(id);
 });
 
+document.getElementById('name-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitName();
+});
+
 document.getElementById('celebrate-close').addEventListener('click', closeCelebration);
 document.getElementById('delete-cancel').addEventListener('click', closeDeleteModal);
 document.getElementById('delete-confirm').addEventListener('click', confirmDelete);
@@ -883,6 +931,7 @@ document.getElementById('delete-overlay').addEventListener('click', (e) => {
 loadData();
 setFormAsset('gold');
 switchView('home');
+maybeAskName();
 
 /* ---------------- Service worker (PWA) ---------------- */
 if ('serviceWorker' in navigator) {

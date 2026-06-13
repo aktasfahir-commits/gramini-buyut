@@ -69,6 +69,14 @@ body {
   letter-spacing: 0.01em;
 }
 
+.brand-greeting {
+  margin-top: 3px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+}
+
 /* Views */
 .view { animation: fade-in 0.25s ease; }
 .hidden { display: none !important; }
@@ -239,6 +247,59 @@ body {
   text-align: center;
   font-size: 1.05rem;
   color: var(--primary-hover);
+}
+
+/* Başlangıç kartı (kayıt yokken) */
+.start-card {
+  text-align: center;
+  background: linear-gradient(135deg, #fffaf0, #fdf3dc);
+  border: 1px solid rgba(202, 161, 47, 0.25);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+.start-card-title {
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--gold-ink);
+  margin-bottom: 6px;
+}
+
+.start-card-text {
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #5c4a14;
+}
+
+.start-card-sub {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.start-card-accent {
+  margin-top: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary-hover);
+}
+
+/* İsim sorma modalı */
+.name-emoji {
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.name-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
 }
 
 /* Motivation card */

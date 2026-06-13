@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#caa12f">
+  <meta name="description" content="Fiziksel altın ve külçe gümüş biriktirme alışkanlığı. Dokunuyorsan Senindir.">
+  <title>Gramını Büyüt</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-logo" aria-hidden="true">🌱</span>
+        <div class="brand-text">
+          <h1 class="brand-title" id="brand-title">Gramını Büyüt</h1>
+          <p class="brand-tagline">Dokunuyorsan Senindir.</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- ANA EKRAN -->
+    <main class="view" id="home-view">
+      <section class="totals">
+        <article class="total-card total-gold">
+          <div class="total-card-head">
+            <span class="total-icon" aria-hidden="true">🥇</span>
+            <span class="total-name">Altın</span>
+          </div>
+          <p class="total-label">Toplam Altın Gramı</p>
+          <p class="total-grams" id="gold-total-grams">0 gr</p>
+          <p class="total-kg" id="gold-total-kg">0 kg</p>
+        </article>
+
+        <article class="total-card total-silver">
+          <div class="total-card-head">
+            <span class="total-icon" aria-hidden="true">🥈</span>
+            <span class="total-name">Gümüş</span>
+          </div>
+          <p class="total-label">Toplam Gümüş Gramı</p>
+          <p class="total-grams" id="silver-total-grams">0 gr</p>
+          <p class="total-kg" id="silver-total-kg">0 kg</p>
+        </article>
+      </section>
+
+      <section class="purity-strip" id="gold-purity-strip">
+        <span class="purity-strip-label">🥇 Altın ayar kırılımı</span>
+        <div class="purity-breakdown" id="gold-purity-breakdown"></div>
+      </section>
+
+      <section class="month-bar">
+        <div class="month-stat month-gold">
+          <span class="month-stat-icon" aria-hidden="true">🥇</span>
+          <div class="month-stat-text">
+            <span class="month-stat-label">Bu ay eklenen altın</span>
+            <span class="month-stat-value" id="gold-month-grams">0 gr</span>
+          </div>
+        </div>
+        <div class="month-stat month-silver">
+          <span class="month-stat-icon" aria-hidden="true">🥈</span>
+          <div class="month-stat-text">
+            <span class="month-stat-label">Bu ay eklenen gümüş</span>
+            <span class="month-stat-value" id="silver-month-grams">0 gr</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="journey-card" id="journey-card">
+        <div class="journey-row">
+          <span class="journey-label">İlk gram</span>
+          <span class="journey-value" id="journey-first-date">—</span>
+        </div>
+        <div class="journey-row">
+          <span class="journey-label" id="journey-days-label">Gramını büyütmeye başlayalı</span>
+          <span class="journey-value" id="journey-days">—</span>
+        </div>
+        <div class="journey-row journey-rhythm">
+          <span class="journey-label">Birikim ritmi</span>
+          <span class="journey-value" id="journey-rhythm">—</span>
+        </div>
+      </section>
+
+      <section class="motivation-card" id="motivation-card">
+        <span class="motivation-quote-mark" aria-hidden="true">“</span>
+        <p class="motivation-text" id="motivation-text"></p>
+      </section>
+
+      <div class="home-actions">
+        <button type="button" class="btn btn-primary btn-block" id="open-add-btn">+ Gram Ekle</button>
+        <button type="button" class="btn btn-ghost btn-block" id="open-history-btn">📊 Toplam Birikimim</button>
+      </div>
+
+      <footer class="footer">
+        <p class="footer-tagline">Fiyatlar değişir. Gramlar kalır.</p>
+        <p class="footer-note">Verilerin yalnızca bu cihazda saklanır.</p>
+      </footer>
+    </main>
+
+    <!-- KAYIT EKLE / DÜZENLE -->
+    <main class="view hidden" id="add-view">
+      <button type="button" class="btn-back" id="add-back-btn"><span aria-hidden="true">←</span> Panoma Dön</button>
+      <section class="card">
+        <h2 class="card-title" id="add-title">Gram Ekle</h2>
+        <p class="card-desc" id="add-desc">Biriktirdiğin fiziksel altın veya gümüşü ekle.</p>
+
+        <form id="record-form" class="record-form">
+          <div class="field">
+            <span class="field-label">Varlık türü</span>
+            <div class="segment" id="asset-segment" role="tablist">
+              <button type="button" class="segment-btn active" data-asset="gold" role="tab">🥇 Altın</button>
+              <button type="button" class="segment-btn" data-asset="silver" role="tab">🥈 Gümüş</button>
+            </div>
+          </div>
+
+          <div class="field" id="purity-field">
+            <span class="field-label">Ayar</span>
+            <div class="segment segment-purity" id="purity-segment" role="tablist"></div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="item-type">Ürün türü</label>
+            <select id="item-type" class="select-input"></select>
+          </div>
+
+          <div class="field" id="quantity-field">
+            <label class="field-label" for="quantity">Adet</label>
+            <div class="stepper">
+              <button type="button" class="stepper-btn" id="qty-minus" aria-label="Azalt">−</button>
+              <input type="number" id="quantity" class="stepper-input" min="1" step="1" value="1" inputmode="numeric">
+              <button type="button" class="stepper-btn" id="qty-plus" aria-label="Artır">+</button>
+            </div>
+          </div>
+
+          <div class="field hidden" id="grams-field">
+            <label class="field-label" for="grams-input">Gram</label>
+            <div class="grams-input-wrap">
+              <input type="number" id="grams-input" class="text-input" min="0.01" step="any" placeholder="0" inputmode="decimal">
+              <span class="grams-unit">gr</span>
+            </div>
+          </div>
+
+          <p class="grams-preview" id="grams-preview" aria-live="polite"></p>
+
+          <div class="field">
+            <label class="field-label" for="record-date">Tarih</label>
+            <input type="date" id="record-date" class="text-input">
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="record-note">Not <span class="field-optional">(opsiyonel)</span></label>
+            <input type="text" id="record-note" class="text-input" maxlength="140" placeholder="Örn: Bayram harçlığıyla aldım">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="record-submit">Kaydet</button>
+        </form>
+      </section>
+    </main>
+
+    <!-- TOPLAM BİRİKİMİM -->
+    <main class="view hidden" id="history-view">
+      <button type="button" class="btn-back" id="history-back-btn"><span aria-hidden="true">←</span> Panoma Dön</button>
+      <section class="card">
+        <h2 class="card-title">Toplam Birikimim</h2>
+        <p class="card-desc">Tüm altın ve gümüş birikimin tek yerde.</p>
+
+        <!-- Üst özet -->
+        <div class="summary-block">
+          <div class="summary-totals">
+            <div class="summary-total summary-gold">
+              <span class="summary-total-label">🥇 Toplam Altın</span>
+              <span class="summary-total-value" id="summary-gold-total">0 gr</span>
+            </div>
+            <div class="summary-total summary-silver">
+              <span class="summary-total-label">🥈 Toplam Gümüş</span>
+              <span class="summary-total-value" id="summary-silver-total">0 gr</span>
+            </div>
+          </div>
+          <div class="summary-purity">
+            <span class="summary-purity-title">Altın ayar kırılımı</span>
+            <div class="purity-breakdown" id="summary-purity-breakdown"></div>
+          </div>
+        </div>
+
+        <!-- Tahmini değer opsiyonu (ikincil) -->
+        <div class="estimate-option">
+          <label class="switch-row" for="estimate-toggle">
+            <span class="switch-text">Bugünkü tahmini değerini görmek ister misin?</span>
+            <span class="switch">
+              <input type="checkbox" id="estimate-toggle">
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+          </label>
+          <div id="estimate-panel" class="estimate-panel hidden"></div>
+        </div>
+
+        <!-- Kayıt listesi -->
+        <h3 class="savings-list-title">Kayıtlar</h3>
+        <div id="history-list"></div>
+        <p id="history-empty" class="empty-text hidden">Henüz gram eklemedin. İlk gramını eklemeye ne dersin?</p>
+      </section>
+    </main>
+
+    <!-- KUTLAMA -->
+    <div id="celebrate-overlay" class="modal-overlay hidden">
+      <div class="modal celebrate-modal">
+        <span class="celebrate-emoji" aria-hidden="true">🎉</span>
+        <h2 class="celebrate-title">Tebrikler!</h2>
+        <p class="celebrate-lead">Bugün gelecekteki kendin için harika bir şey yaptın.</p>
+        <ul class="celebrate-stats" id="celebrate-stats"></ul>
+        <p class="celebrate-footer">Gramını büyütmeye devam et.</p>
+        <button type="button" class="btn btn-primary btn-block" id="celebrate-close">Panoma Dön</button>
+      </div>
+    </div>
+
+    <!-- SİL ONAY -->
+    <div id="delete-overlay" class="modal-overlay hidden">
+      <div class="modal modal-compact">
+        <h3 class="modal-title">Kaydı Sil</h3>
+        <p class="modal-lead">Bu kaydı silmek istediğine emin misin?</p>
+        <p class="delete-record-name" id="delete-record-name"></p>
+        <p class="modal-warning">Bu işlem geri alınamaz.</p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="delete-cancel">Vazgeç</button>
+          <button type="button" class="btn btn-danger" id="delete-confirm">Sil</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="app.js?v=6"></script>
+</body>
+</html>

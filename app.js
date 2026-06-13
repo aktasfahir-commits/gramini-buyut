@@ -102,6 +102,18 @@ const DEFAULT_PRICE_STATE = {
 // gold14BuyPricePerGramTRY: 2500, silverPricePerGramTRY: 45, updatedAt: '2026-06-13'
 // TEK KAYNAK: fiyatlar yalnızca data.priceState içinde tutulur (ayrı modül değişkeni yok).
 
+/* ---------------- Günlük Piyasa (ana ekran bilgi kartı) ---------------- */
+// TODO: Günlük Piyasa fiyatları canlı API'den marketState'e yazılacak. (V2)
+// TODO: Günlük Piyasa kartı kullanıcı tarafından gizlenebilir yapılacak.
+// marketState yalnızca ana ekrandaki Günlük Piyasa kartı içindir; priceState ile karışmaz.
+const DEFAULT_MARKET_STATE = {
+  goldGramTRY: null,
+  silverGramTRY: null,
+  updatedAt: null,
+};
+
+// Demo denemek için: goldGramTRY: 4250, silverGramTRY: 45, updatedAt: '2026-06-13T10:00:00'
+
 /* ---------------- State ---------------- */
 // Tam v2 şeması ile boş veri üretir (her sıfırlamada aynı eksiksiz şekil).
 function emptyData() {
@@ -110,6 +122,7 @@ function emptyData() {
     records: [],
     settings: { showEstimatedValue: false, name: null, nameAsked: false },
     priceState: { ...DEFAULT_PRICE_STATE },
+    marketState: { ...DEFAULT_MARKET_STATE },
   };
 }
 
@@ -214,6 +227,7 @@ function loadData() {
 
     const settings = normalizeSettings(parsed.settings);
     const priceState = normalizePriceState(parsed.priceState);
+    const marketState = normalizeMarketState(parsed.marketState);
 
     if (parsed.version === DATA_VERSION) {
       data = {
@@ -221,6 +235,7 @@ function loadData() {
         records: parsed.records.map(normalizeRecord).filter(isValidRecord),
         settings,
         priceState,
+        marketState,
       };
       return;
     }
@@ -231,6 +246,7 @@ function loadData() {
         records: parsed.records.map(migrateRecordV1toV2).filter(isValidRecord),
         settings,
         priceState,
+        marketState,
       };
       saveData();
       return;
@@ -262,6 +278,15 @@ function normalizePriceState(p) {
     else out[k] = typeof src[k] === 'number' && src[k] > 0 ? src[k] : null;
   });
   return out;
+}
+
+function normalizeMarketState(m) {
+  const src = m && typeof m === 'object' ? m : {};
+  return {
+    goldGramTRY: typeof src.goldGramTRY === 'number' && src.goldGramTRY > 0 ? src.goldGramTRY : null,
+    silverGramTRY: typeof src.silverGramTRY === 'number' && src.silverGramTRY > 0 ? src.silverGramTRY : null,
+    updatedAt: typeof src.updatedAt === 'string' ? src.updatedAt : null,
+  };
 }
 
 // v1 → v2: altın kayıtlarına goldPurity ekle, gümüşte null.
@@ -402,6 +427,7 @@ function renderHome() {
   renderGoldPurityBreakdown();
   renderJourney();
   renderMotivation();
+  renderMarketCard();
 }
 
 // Başlık altında sıcak karşılama: kayıt yoksa "hoş geldin", varsa "devam et".
@@ -484,6 +510,49 @@ function renderJourney() {
 function renderMotivation() {
   const card = stablePick(`mot|${today()}`, MOTIVATION_CARDS);
   document.getElementById('motivation-text').textContent = card.text;
+}
+
+function formatMarketUpdatedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+// Günlük Piyasa: bilgilendirme amaçlı, portföy/kâr-zarar yok.
+function renderMarketCard() {
+  const body = document.getElementById('market-card-body');
+  const m = data.marketState;
+  const hasGold = typeof m.goldGramTRY === 'number' && m.goldGramTRY > 0;
+  const hasSilver = typeof m.silverGramTRY === 'number' && m.silverGramTRY > 0;
+
+  if (!hasGold && !hasSilver) {
+    body.innerHTML = '<p class="market-empty">Fiyat bilgisi yakında eklenecek.</p>';
+    return;
+  }
+
+  const updatedLine = m.updatedAt
+    ? `<p class="market-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(m.updatedAt))}</p>`
+    : '';
+
+  body.innerHTML = `
+    <div class="market-rows">
+      <div class="market-row">
+        <span class="market-label">Gram Altın</span>
+        <span class="market-value">${hasGold ? escapeHtml(formatTRY(m.goldGramTRY)) : '—'}</span>
+      </div>
+      <div class="market-row">
+        <span class="market-label">Gram Gümüş</span>
+        <span class="market-value">${hasSilver ? escapeHtml(formatTRY(m.silverGramTRY)) : '—'}</span>
+      </div>
+    </div>
+    ${updatedLine}`;
 }
 
 /* ---------------- Toplam Birikimim render ---------------- */

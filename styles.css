@@ -333,6 +333,70 @@ body {
   padding-left: 8px;
 }
 
+/* Günlük Piyasa — ikincil bilgi kartı */
+.market-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: none;
+}
+
+.market-card-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.market-rows { display: flex; flex-direction: column; gap: 6px; }
+
+.market-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.market-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.market-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.market-updated {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.market-empty {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.market-card-foot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
 /* Buttons */
 .btn {
   font-family: var(--font);

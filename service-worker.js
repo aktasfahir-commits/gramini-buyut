@@ -1,12 +1,14 @@
 /* Gramını Büyüt — service worker (app shell cache, çevrimdışı çalışma) */
 
-const CACHE_NAME = 'gramini-buyut-v11';
+const CACHE_NAME = 'gramini-buyut-v12';
 
+// data/market.json kasıtlı olarak APP_SHELL'de değil.
+// Fiyat dosyası network-first ile mümkün olduğunca güncel kalır; offline'da son cache kullanılır.
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=9',
-  './app.js?v=10',
+  './styles.css?v=10',
+  './app.js?v=11',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -30,8 +32,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // Sadece aynı-origin GET istekleri: network-first.
-// Çevrimiçiyken her zaman güncel kod (kod değişiklikleri anında görünür),
-// çevrimdışıyken cache fallback ile uygulama yine de açılır.
+// Çevrimiçiyken her zaman güncel kod ve market.json; çevrimdışıyken cache fallback.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;

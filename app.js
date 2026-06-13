@@ -103,17 +103,18 @@ const DEFAULT_PRICE_STATE = {
 // TEK KAYNAK: fiyatlar yalnızca data.priceState içinde tutulur (ayrı modül değişkeni yok).
 
 /* ---------------- Günlük Piyasa (ana ekran bilgi kartı) ---------------- */
-// TODO: Günlük Piyasa fiyatları canlı API'den marketState'e yazılacak. (V2)
+// Veri kaynağı: data/market.json (GitHub Actions → scripts/update-market.js)
 // TODO: Günlük Piyasa kartı kullanıcı tarafından gizlenebilir yapılacak.
-// marketState yalnızca ana ekrandaki Günlük Piyasa kartı içindir; priceState ile karışmaz.
-const DEFAULT_MARKET_STATE = {
-  goldGramTRY: null,
-  silverGramTRY: null,
+// marketFeed yalnızca ana ekrandaki Günlük Piyasa kartı içindir; priceState ile karışmaz.
+const EMPTY_MARKET_FEED = {
+  gold: { buyTRY: null, sellTRY: null },
+  silver: { buyTRY: null, sellTRY: null },
   updatedAt: null,
+  source: 'auto',
+  status: 'empty',
 };
 
-// Demo denemek için: goldGramTRY: 4250, silverGramTRY: 45, updatedAt: '2026-06-13T10:00:00'
-
+let marketFeed = { ...EMPTY_MARKET_FEED, gold: { ...EMPTY_MARKET_FEED.gold }, silver: { ...EMPTY_MARKET_FEED.silver } };
 /* ---------------- State ---------------- */
 // Tam v2 şeması ile boş veri üretir (her sıfırlamada aynı eksiksiz şekil).
 function emptyData() {
@@ -122,7 +123,6 @@ function emptyData() {
     records: [],
     settings: { showEstimatedValue: false, name: null, nameAsked: false },
     priceState: { ...DEFAULT_PRICE_STATE },
-    marketState: { ...DEFAULT_MARKET_STATE },
   };
 }
 
@@ -227,7 +227,6 @@ function loadData() {
 
     const settings = normalizeSettings(parsed.settings);
     const priceState = normalizePriceState(parsed.priceState);
-    const marketState = normalizeMarketState(parsed.marketState);
 
     if (parsed.version === DATA_VERSION) {
       data = {
@@ -235,7 +234,6 @@ function loadData() {
         records: parsed.records.map(normalizeRecord).filter(isValidRecord),
         settings,
         priceState,
-        marketState,
       };
       return;
     }
@@ -246,7 +244,6 @@ function loadData() {
         records: parsed.records.map(migrateRecordV1toV2).filter(isValidRecord),
         settings,
         priceState,
-        marketState,
       };
       saveData();
       return;
@@ -278,15 +275,6 @@ function normalizePriceState(p) {
     else out[k] = typeof src[k] === 'number' && src[k] > 0 ? src[k] : null;
   });
   return out;
-}
-
-function normalizeMarketState(m) {
-  const src = m && typeof m === 'object' ? m : {};
-  return {
-    goldGramTRY: typeof src.goldGramTRY === 'number' && src.goldGramTRY > 0 ? src.goldGramTRY : null,
-    silverGramTRY: typeof src.silverGramTRY === 'number' && src.silverGramTRY > 0 ? src.silverGramTRY : null,
-    updatedAt: typeof src.updatedAt === 'string' ? src.updatedAt : null,
-  };
 }
 
 // v1 → v2: altın kayıtlarına goldPurity ekle, gümüşte null.
@@ -525,14 +513,54 @@ function formatMarketUpdatedAt(iso) {
   });
 }
 
+function normalizeMarketPrice(n) {
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function parseMarketFeed(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const gold = raw.gold && typeof raw.gold === 'object' ? raw.gold : {};
+  const silver = raw.silver && typeof raw.silver === 'object' ? raw.silver : {};
+  return {
+    gold: {
+      buyTRY: normalizeMarketPrice(gold.buyTRY),
+      sellTRY: normalizeMarketPrice(gold.sellTRY),
+    },
+    silver: {
+      buyTRY: normalizeMarketPrice(silver.buyTRY),
+      sellTRY: normalizeMarketPrice(silver.sellTRY),
+    },
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
+    source: typeof raw.source === 'string' ? raw.source : 'auto',
+    status: typeof raw.status === 'string' ? raw.status : 'empty',
+  };
+}
+
+function hasMarketMetalPrices(metal) {
+  return normalizeMarketPrice(metal?.buyTRY) != null || normalizeMarketPrice(metal?.sellTRY) != null;
+}
+
+function marketPriceText(value) {
+  const n = normalizeMarketPrice(value);
+  return n != null ? formatTRY(n) : '—';
+}
+
+function marketAssetBlock(label, metal) {
+  return `
+    <div class="market-asset">
+      <p class="market-asset-name">${escapeHtml(label)}</p>
+      <p class="market-price-line">Alış: <span>${escapeHtml(marketPriceText(metal?.buyTRY))}</span></p>
+      <p class="market-price-line">Satış: <span>${escapeHtml(marketPriceText(metal?.sellTRY))}</span></p>
+    </div>`;
+}
+
 // Günlük Piyasa: bilgilendirme amaçlı, portföy/kâr-zarar yok.
 function renderMarketCard() {
   const body = document.getElementById('market-card-body');
-  const m = data.marketState;
-  const hasGold = typeof m.goldGramTRY === 'number' && m.goldGramTRY > 0;
-  const hasSilver = typeof m.silverGramTRY === 'number' && m.silverGramTRY > 0;
+  const m = marketFeed;
+  const hasData = hasMarketMetalPrices(m.gold) || hasMarketMetalPrices(m.silver);
 
-  if (!hasGold && !hasSilver) {
+  if (!hasData) {
     body.innerHTML = '<p class="market-empty">Fiyat bilgisi yakında eklenecek.</p>';
     return;
   }
@@ -542,17 +570,24 @@ function renderMarketCard() {
     : '';
 
   body.innerHTML = `
-    <div class="market-rows">
-      <div class="market-row">
-        <span class="market-label">Gram Altın</span>
-        <span class="market-value">${hasGold ? escapeHtml(formatTRY(m.goldGramTRY)) : '—'}</span>
-      </div>
-      <div class="market-row">
-        <span class="market-label">Gram Gümüş</span>
-        <span class="market-value">${hasSilver ? escapeHtml(formatTRY(m.silverGramTRY)) : '—'}</span>
-      </div>
+    <div class="market-assets">
+      ${marketAssetBlock('Gram Altın', m.gold)}
+      ${marketAssetBlock('Gram Gümüş', m.silver)}
     </div>
     ${updatedLine}`;
+}
+
+async function loadMarketFeed() {
+  try {
+    const res = await fetch('./data/market.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    const parsed = parseMarketFeed(await res.json());
+    if (!parsed) return;
+    marketFeed = parsed;
+    renderMarketCard();
+  } catch {
+    // Sessizce kal; kart boş durum mesajını gösterir.
+  }
 }
 
 /* ---------------- Toplam Birikimim render ---------------- */
@@ -1003,6 +1038,7 @@ loadData();
 setFormAsset('gold');
 switchView('home');
 maybeAskName();
+loadMarketFeed();
 
 /* ---------------- Service worker (PWA) ---------------- */
 if ('serviceWorker' in navigator) {

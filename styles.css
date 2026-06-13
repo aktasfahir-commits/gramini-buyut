@@ -354,6 +354,35 @@ body {
 
 .market-rows { display: flex; flex-direction: column; gap: 6px; }
 
+.market-assets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.market-asset + .market-asset {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.market-asset-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.market-price-line {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.market-price-line span {
+  font-weight: 700;
+  color: var(--text);
+}
+
 .market-row {
   display: flex;
   justify-content: space-between;

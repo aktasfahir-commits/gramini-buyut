@@ -1,0 +1,41 @@
+name: Update market data
+
+on:
+  schedule:
+    # Hafta içi her 30 dakikada bir (UTC)
+    - cron: '*/30 * * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-update
+  cancel-in-progress: false
+
+jobs:
+  update-market:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch and write market.json
+        run: node scripts/update-market.js
+
+      - name: Commit market.json if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/market.json
+          if git diff --staged --quiet; then
+            echo "market.json değişmedi."
+          else
+            git commit -m "chore: güncel market.json"
+            git push
+          fi

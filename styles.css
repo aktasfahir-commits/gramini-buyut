@@ -275,17 +275,19 @@ body {
   color: #5c4a14;
 }
 
-.start-card-sub {
-  margin-top: 4px;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
 .start-card-accent {
-  margin-top: 14px;
+  margin-top: 10px;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--primary-hover);
+}
+
+.start-card-foot {
+  margin-top: 14px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
 }
 
 /* İsim sorma modalı */

@@ -81,6 +81,7 @@ const MOTIVATION_CARDS = [
   { id: 'm5', type: 'genel', text: 'Dokunuyorsan Senindir.' },
   { id: 'm6', type: 'genel', text: 'Hayatı yaşa. Geleceğini de unutma.' },
   { id: 'm7', type: 'genel', text: 'Küçük ama düzenli. Gerçek birikim böyle büyür.' },
+  { id: 'm8', type: 'genel', text: 'Tohumlar fidana, gramlar eve, arabaya, tatile dönmeli yurdumda.' },
 ];
 
 /* ---------------- Fiyat altyapısı (V1: canlı API yok) ---------------- */
@@ -412,7 +413,7 @@ function renderGreeting() {
     el.textContent = '';
     return;
   }
-  el.textContent = data.records.length
+  el.textContent = data.records.length > 0
     ? `${name}, gramını büyütmeye devam et.`
     : `${name}, hoş geldin.`;
   el.classList.remove('hidden');
@@ -834,6 +835,7 @@ function confirmDelete() {
   data.records = data.records.filter((r) => r.id !== deleteRecordId);
   saveData();
   closeDeleteModal();
+  renderGreeting();
   renderHistory();
   showToast('Kayıt silindi.');
 }

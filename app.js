@@ -74,7 +74,7 @@ const LEGACY_ITEM_REMAP = {
 // V1: statik havuz. İleride 200-300 karta ve fiyat temelli kartlara büyüyecek.
 // type alanı şimdiden ileri uyumluluk için: 'genel' | 'gunluk-ornek' | 'fiyat-dusus' | 'fiyat-artis'
 const MOTIVATION_CARDS = [
-  { id: 'm1', type: 'gunluk-ornek', text: 'Bir kahve birkaç dakikalık keyif verebilir. Bir gram altın yıllarca seninle kalabilir. İkisinin de yeri var.' },
+  { id: 'm1', type: 'gunluk-ornek', text: 'Kahvene para harca. Ama unutma, gram altın daha lezzetli.' },
   { id: 'm2', type: 'genel', text: 'Hayatı erteleme. Geleceğini de erteleme.' },
   { id: 'm3', type: 'genel', text: 'Bugün gelecekteki kendine küçük bir hediye bırak.' },
   { id: 'm4', type: 'genel', text: 'Fiyatlar değişir. Gramlar kalır.' },

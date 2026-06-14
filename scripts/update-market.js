@@ -2,37 +2,31 @@
  * Günlük Piyasa verisi üretici.
  * GitHub Actions veya yerelde: node scripts/update-market.js
  *
- * Kaynaklar:
- * - Gram Altın: https://doviz-api.onrender.com/api/altin (birincil)
- * - Gram Altın yedek: https://www.zulfumehmet.com/api/piyasa.json
- * - Gram Gümüş: https://altin.doviz.com/gumus (banka/kuyumcu alış-satış tablosu)
+ * Kaynak: altin.doviz.com kurum sayfaları (gram altın + gram gümüş birlikte)
+ * Öncelik: Dünya Katılım → DestekBank → Vakıf Katılım
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const GOLD_DOVIZ_URL = 'https://doviz-api.onrender.com/api/altin';
-const GOLD_ZULFU_URL = 'https://www.zulfumehmet.com/api/piyasa.json';
-const SILVER_DOVIZ_COM_URL = 'https://altin.doviz.com/gumus';
 const OUT_PATH = path.join(__dirname, '..', 'data', 'market.json');
 const FETCH_TIMEOUT_MS = 25000;
 
-const GOLD_LABEL = 'Gram altın piyasa verisi';
-const EMPTY_SILVER = { buyTRY: null, sellTRY: null, label: null };
+const INSTITUTIONS = [
+  { slug: 'dunya-katilim', label: 'Dünya Katılım referans kuru' },
+  { slug: 'destekbank', label: 'DestekBank referans kuru' },
+  { slug: 'vakif-katilim', label: 'Vakıf Katılım referans kuru' },
+];
+
+const EMPTY_METAL = { buyTRY: null, sellTRY: null, label: null };
 
 const EMPTY_MARKET = {
-  gold: { buyTRY: null, sellTRY: null, label: GOLD_LABEL },
-  silver: { ...EMPTY_SILVER },
+  gold: { ...EMPTY_METAL },
+  silver: { ...EMPTY_METAL },
   updatedAt: null,
   source: 'auto',
   status: 'empty',
 };
-
-const PREFERRED_SILVER_BANKS = [
-  { key: 'dunya katilim', label: 'Dünya Katılım gümüş kuru' },
-  { key: 'vakif katilim', label: 'Vakıf Katılım gümüş kuru' },
-  { key: 'destekbank', label: 'DestekBank gümüş kuru' },
-];
 
 /** TR sayı formatını (6.307,25 / 101,07 / 6307.25) güvenli number'a çevirir. */
 function parseTRNumber(raw) {
@@ -61,35 +55,30 @@ function parseTRNumber(raw) {
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
 }
 
-function readField(obj, keys) {
-  if (!obj || typeof obj !== 'object') return undefined;
-  for (const key of keys) {
-    if (obj[key] != null && obj[key] !== '') return obj[key];
-  }
-  return undefined;
-}
-
-function normBankKey(name) {
-  return String(name).toLowerCase()
+function normText(value) {
+  return String(value).toLowerCase()
     .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
     .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
 
-async function fetchJson(url) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
+function isGoldProduct(name) {
+  const key = normText(name);
+  return key.includes('gram altin') || key === 'gram altin';
+}
+
+function isSilverProduct(name) {
+  const key = normText(name);
+  return key.includes('gram gumus') || key === 'gram gumus';
+}
+
+function isReasonableQuote(kind, buyTRY, sellTRY) {
+  if (buyTRY == null || sellTRY == null || sellTRY <= buyTRY) return false;
+  if (kind === 'gold') return buyTRY >= 500 && sellTRY <= 25000;
+  if (kind === 'silver') return buyTRY >= 10 && sellTRY <= 500;
+  const spread = (sellTRY - buyTRY) / buyTRY;
+  return spread <= 0.25;
 }
 
 async function fetchText(url) {
@@ -107,116 +96,43 @@ async function fetchText(url) {
   }
 }
 
-/** Doviz-API: Altin = gram altın (serbest piyasa). */
-function parseGoldFromDoviz(payload) {
-  const item = payload?.data?.Altin;
-  if (!item || typeof item !== 'object') return { buyTRY: null, sellTRY: null };
-
-  return {
-    buyTRY: parseTRNumber(readField(item, ['Alis', 'alis', 'buy', 'buying'])),
-    sellTRY: parseTRNumber(readField(item, ['Satis', 'satis', 'sell', 'selling'])),
-  };
+function extractTableCells(trHtml) {
+  return [...trHtml.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)]
+    .map((m) => m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
 }
 
-/** Zülfü Mehmet: ikinci dizi altın ürünleri; giramaltin = gram altın. */
-function parseGold(payload) {
-  const rows = Array.isArray(payload?.[1]) ? payload[1] : Array.isArray(payload) ? payload : [];
-  const item = rows.find((r) => {
-    if (!r || typeof r !== 'object') return false;
-    const code = String(r.kisaisim || r.code || '').toLowerCase();
-    const name = String(r.cinsi || r.name || '').toLowerCase();
-    return code === 'giramaltin' || code === 'gramaltin' || name.includes('gram altın') || name.includes('gram altin');
-  });
+/** Kurum sayfası: Gram Altın + Gram Gümüş satırlarını birlikte parse eder. */
+function parseInstitutionPage(html, label) {
+  if (typeof html !== 'string') return null;
 
-  if (!item) return { buyTRY: null, sellTRY: null };
-
-  return {
-    buyTRY: parseTRNumber(readField(item, ['alis', 'Alis', 'buy', 'buying'])),
-    sellTRY: parseTRNumber(readField(item, ['satis', 'Satis', 'sell', 'selling'])),
-  };
-}
-
-function parseDovizComSilverRows(html) {
-  const rows = [];
+  const found = { gold: null, silver: null };
   const trRe = /<tr\b[\s\S]*?<\/tr>/gi;
   let tr;
+
   while ((tr = trRe.exec(html)) !== null) {
-    const block = tr[0];
-    if (!block.includes('data-socket-attr="bid"')) continue;
+    const cells = extractTableCells(tr[0]);
+    if (cells.length < 3) continue;
 
-    const bidM = block.match(/data-socket-attr="bid"[^>]*>\s*([^<]+?)\s*</i);
-    const askM = block.match(/data-socket-attr="ask"[^>]*>\s*([^<]+?)\s*</i);
-    if (!bidM || !askM) continue;
+    const product = cells[0];
+    const buyTRY = parseTRNumber(cells[1]);
+    const sellTRY = parseTRNumber(cells[2]);
 
-    const buyTRY = parseTRNumber(bidM[1]);
-    const sellTRY = parseTRNumber(askM[1]);
-
-    let bankName = '';
-    const altM = block.match(/alt="([^"]+?)\s*Gram\s*G[uü]m[uü][şs]/i);
-    if (altM) bankName = altM[1].trim();
-    if (!bankName) {
-      const textM = block.match(/<a\b[^>]*>[\s\S]*?<img\b[^>]*>[\s\S]*?([^<]+?)<\/a>/i);
-      if (textM) bankName = textM[1].trim();
+    if (isGoldProduct(product) && isReasonableQuote('gold', buyTRY, sellTRY)) {
+      found.gold = { buyTRY, sellTRY };
+      continue;
     }
 
-    if (!bankName || buyTRY == null || sellTRY == null) continue;
-    rows.push({ bankName, buyTRY, sellTRY });
-  }
-  return rows;
-}
-
-function isReasonableSilverQuote(buyTRY, sellTRY) {
-  if (buyTRY == null || sellTRY == null) return false;
-  if (sellTRY <= buyTRY) return false;
-  if (buyTRY < 70 || sellTRY > 250) return false;
-  const spread = (sellTRY - buyTRY) / buyTRY;
-  return spread <= 0.2;
-}
-
-function median(nums) {
-  if (!nums.length) return null;
-  const sorted = [...nums].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1
-    ? sorted[mid]
-    : Math.round(((sorted[mid - 1] + sorted[mid]) / 2) * 100) / 100;
-}
-
-function trimOutliers(rows) {
-  if (rows.length < 4) return rows;
-  const buys = rows.map((r) => r.buyTRY).sort((a, b) => a - b);
-  const sells = rows.map((r) => r.sellTRY).sort((a, b) => a - b);
-  const buyLo = buys[Math.floor(buys.length * 0.1)];
-  const buyHi = buys[Math.ceil(buys.length * 0.9) - 1];
-  const sellLo = sells[Math.floor(sells.length * 0.1)];
-  const sellHi = sells[Math.ceil(sells.length * 0.9) - 1];
-  return rows.filter((r) => r.buyTRY >= buyLo && r.buyTRY <= buyHi
-    && r.sellTRY >= sellLo && r.sellTRY <= sellHi);
-}
-
-/** altin.doviz.com: banka gram gümüş alış/satış tablosu. */
-function parseDovizComSilver(html) {
-  if (typeof html !== 'string') return { ...EMPTY_SILVER };
-
-  const rows = parseDovizComSilverRows(html).filter((r) => isReasonableSilverQuote(r.buyTRY, r.sellTRY));
-  if (!rows.length) return { ...EMPTY_SILVER };
-
-  for (const pref of PREFERRED_SILVER_BANKS) {
-    const hit = rows.find((r) => normBankKey(r.bankName).includes(pref.key));
-    if (hit) {
-      return { buyTRY: hit.buyTRY, sellTRY: hit.sellTRY, label: pref.label };
+    if (isSilverProduct(product) && isReasonableQuote('silver', buyTRY, sellTRY)) {
+      found.silver = { buyTRY, sellTRY };
     }
   }
 
-  const trimmed = trimOutliers(rows);
-  const pool = trimmed.length >= 3 ? trimmed : rows;
-  const buyTRY = median(pool.map((r) => r.buyTRY));
-  const sellTRY = median(pool.map((r) => r.sellTRY));
-  if (buyTRY == null || sellTRY == null || !isReasonableSilverQuote(buyTRY, sellTRY)) {
-    return { ...EMPTY_SILVER };
-  }
+  if (!found.gold || !found.silver) return null;
 
-  return { buyTRY, sellTRY, label: 'Temsilci banka gümüş kuru' };
+  return {
+    gold: { buyTRY: found.gold.buyTRY, sellTRY: found.gold.sellTRY, label },
+    silver: { buyTRY: found.silver.buyTRY, sellTRY: found.silver.sellTRY, label },
+  };
 }
 
 function hasMetalPrices(metal) {
@@ -224,11 +140,13 @@ function hasMetalPrices(metal) {
     || (typeof metal?.sellTRY === 'number' && metal.sellTRY > 0);
 }
 
+function hasCompletePair(gold, silver) {
+  return hasMetalPrices(gold) && hasMetalPrices(silver);
+}
+
 function resolveStatus(gold, silver) {
-  const g = hasMetalPrices(gold);
-  const s = hasMetalPrices(silver);
-  if (g && s) return 'ok';
-  if (g || s) return 'partial';
+  if (hasCompletePair(gold, silver)) return 'ok';
+  if (hasMetalPrices(gold) || hasMetalPrices(silver)) return 'partial';
   return 'empty';
 }
 
@@ -248,84 +166,68 @@ function writeMarket(market) {
   fs.writeFileSync(OUT_PATH, `${JSON.stringify(market, null, 2)}\n`, 'utf8');
 }
 
-function preserveExistingAndExit(existing) {
+function preserveExistingAndExit() {
   console.log('Yeni veri alınamadı, mevcut market.json korundu.');
   process.exit(0);
 }
 
+async function fetchInstitutionQuote(institution) {
+  const url = `https://altin.doviz.com/${institution.slug}`;
+  const html = await fetchText(url);
+  const parsed = parseInstitutionPage(html, institution.label);
+  if (!parsed) {
+    throw new Error(`${institution.slug}: gram altın/gümüş birlikte parse edilemedi`);
+  }
+  return parsed;
+}
+
+async function fetchMarketFromInstitutions() {
+  for (const institution of INSTITUTIONS) {
+    try {
+      const quote = await fetchInstitutionQuote(institution);
+      console.log(`Kaynak seçildi: ${institution.label} (${institution.slug})`);
+      return quote;
+    } catch (err) {
+      console.error(`${institution.slug} hatası:`, err.message);
+    }
+  }
+  return null;
+}
+
 async function main() {
   const existing = readExistingMarket();
-  let gold = { buyTRY: null, sellTRY: null, label: GOLD_LABEL };
-  let silver = { ...EMPTY_SILVER };
-  let hadError = false;
+  const quote = await fetchMarketFromInstitutions();
 
-  try {
-    const goldPayload = await fetchJson(GOLD_DOVIZ_URL);
-    const parsed = parseGoldFromDoviz(goldPayload);
-    gold = { ...parsed, label: GOLD_LABEL };
-    if (!hasMetalPrices(gold)) {
-      const fallbackPayload = await fetchJson(GOLD_ZULFU_URL);
-      const fallback = parseGold(fallbackPayload);
-      gold = { ...fallback, label: GOLD_LABEL };
+  if (!quote) {
+    if (existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
+      preserveExistingAndExit();
     }
-  } catch (err) {
-    hadError = true;
-    console.error('Altın kaynağı hatası:', err.message);
-    try {
-      const fallbackPayload = await fetchJson(GOLD_ZULFU_URL);
-      const fallback = parseGold(fallbackPayload);
-      gold = { ...fallback, label: GOLD_LABEL };
-    } catch (fallbackErr) {
-      console.error('Altın yedek kaynağı hatası:', fallbackErr.message);
-      if (existing?.gold) gold = existing.gold;
-    }
+
+    writeMarket({ ...EMPTY_MARKET });
+    console.log('Hiçbir kurumdan veri alınamadı; market.json boş yazıldı.');
+    process.exit(0);
   }
 
-  try {
-    const html = await fetchText(SILVER_DOVIZ_COM_URL);
-    silver = parseDovizComSilver(html);
-    if (!hasMetalPrices(silver)) {
-      hadError = true;
-      console.error('Gümüş parse edilemedi; fiyat boş bırakıldı.');
-      silver = { ...EMPTY_SILVER };
-    }
-  } catch (err) {
-    hadError = true;
-    console.error('Gümüş kaynağı hatası:', err.message);
-    silver = { ...EMPTY_SILVER };
-  }
-
+  const { gold, silver } = quote;
   const status = resolveStatus(gold, silver);
-
-  if (status === 'empty' && existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
-    preserveExistingAndExit(existing);
-  }
-
   const market = {
     gold,
     silver,
-    updatedAt: status === 'empty' ? (existing?.updatedAt ?? null) : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     source: 'auto',
     status,
   };
 
-  if (status !== 'empty') {
-    market.updatedAt = new Date().toISOString();
-  }
-
   writeMarket(market);
   console.log(`market.json güncellendi (status: ${market.status}).`);
-  if (hadError) {
-    console.log('Bazı kaynaklar başarısız oldu; mevcut veriler yazıldı veya boş bırakıldı.');
-  }
 }
 
 main().catch((err) => {
   console.error('Beklenmeyen hata:', err.message);
   const existing = readExistingMarket();
   if (existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
-    preserveExistingAndExit(existing);
+    preserveExistingAndExit();
   }
   writeMarket({ ...EMPTY_MARKET });
-  process.exit(1);
+  process.exit(0);
 });

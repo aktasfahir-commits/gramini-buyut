@@ -108,7 +108,7 @@ const DEFAULT_PRICE_STATE = {
 // marketFeed yalnızca ana ekrandaki Günlük Piyasa kartı içindir; priceState ile karışmaz.
 const EMPTY_MARKET_FEED = {
   gold: { buyTRY: null, sellTRY: null },
-  silver: { buyTRY: null, sellTRY: null },
+  silver: { buyTRY: null, sellTRY: null, label: null },
   updatedAt: null,
   source: 'auto',
   status: 'empty',
@@ -529,6 +529,7 @@ function parseMarketFeed(raw) {
     silver: {
       buyTRY: normalizeMarketPrice(silver.buyTRY),
       sellTRY: normalizeMarketPrice(silver.sellTRY),
+      label: typeof silver.label === 'string' && silver.label.trim() ? silver.label.trim() : null,
     },
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
     source: typeof raw.source === 'string' ? raw.source : 'auto',
@@ -555,7 +556,18 @@ function marketAssetBlock(label, metal) {
 }
 
 function marketSilverBlock(metal) {
-  if (hasMarketMetalPrices(metal)) return marketAssetBlock('Gram Gümüş', metal);
+  if (hasMarketMetalPrices(metal)) {
+    const sourceLine = metal?.label
+      ? `<p class="market-asset-source">${escapeHtml(metal.label)}</p>`
+      : '';
+    return `
+    <div class="market-asset">
+      <p class="market-asset-name">Gram Gümüş</p>
+      ${sourceLine}
+      <p class="market-price-line">Alış: <span>${escapeHtml(marketPriceText(metal?.buyTRY))}</span></p>
+      <p class="market-price-line">Satış: <span>${escapeHtml(marketPriceText(metal?.sellTRY))}</span></p>
+    </div>`;
+  }
   return `
     <div class="market-asset">
       <p class="market-asset-name">Gram Gümüş</p>

@@ -76,7 +76,7 @@ const LEGACY_ITEM_REMAP = {
 // TODO: İleride motivasyon kartı önizleme/test modu eklenebilir.
 const MOTIVATION_CARDS = [
   { id: 'm1', type: 'gunluk-ornek', text: 'Kahvene para harca. Ama unutma, gram altın daha lezzetli.' },
-  { id: 'm2', type: 'genel', text: 'Hayatı erteleme. Geleceğini de erteleme.' },
+  { id: 'm2', type: 'genel', text: 'Hayatı yaşa ama gelecek bir gün gelecek, bunu da unutma.' },
   { id: 'm3', type: 'genel', text: 'Bugün gelecekteki kendine küçük bir hediye bırak.' },
   { id: 'm4', type: 'genel', text: 'Fiyatlar değişir. Gramlar kalır.' },
   { id: 'm5', type: 'genel', text: 'Dokunuyorsan Senindir.' },

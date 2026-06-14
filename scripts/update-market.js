@@ -2,56 +2,37 @@
  * Günlük Piyasa verisi üretici.
  * GitHub Actions veya yerelde: node scripts/update-market.js
  *
- * Referans kaynak: Investing.com
- * - Gram Altın (GAU/TRY): https://tr.investing.com/currencies/gau-try
- * - Gram Gümüş (XAGg/TRY): https://tr.investing.com/currencies/xagg-try
- *
- * Sunucu tarafı erişim:
- * 1) Birincil: Investing grafik altyapısı (tvc6.investing.com) — investiny ile aynı uç nokta
- * 2) Yedek: Investing.com sayfa HTML parse (Cloudflare engeli olabilir)
- *
- * Not: Investing.com resmi public API sunmaz; bot trafiği Cloudflare ile 403 dönebilir.
+ * Kaynaklar:
+ * - Gram Altın: https://doviz-api.onrender.com/api/altin (birincil)
+ * - Gram Altın yedek: https://www.zulfumehmet.com/api/piyasa.json
+ * - Gram Gümüş: https://altin.doviz.com/gumus (banka/kuyumcu alış-satış tablosu)
  */
 
 const fs = require('fs');
 const path = require('path');
-const { randomUUID } = require('crypto');
 
+const GOLD_DOVIZ_URL = 'https://doviz-api.onrender.com/api/altin';
+const GOLD_ZULFU_URL = 'https://www.zulfumehmet.com/api/piyasa.json';
+const SILVER_DOVIZ_COM_URL = 'https://altin.doviz.com/gumus';
 const OUT_PATH = path.join(__dirname, '..', 'data', 'market.json');
 const FETCH_TIMEOUT_MS = 25000;
-const MARKET_SOURCE_LABEL = 'Investing.com piyasa verisi';
 
-const INVESTING_INSTRUMENTS = {
-  gold: {
-    pageUrl: 'https://tr.investing.com/currencies/gau-try',
-    searchQuery: 'GAU/TRY',
-    minPrice: 500,
-    maxPrice: 20000,
-  },
-  silver: {
-    pageUrl: 'https://tr.investing.com/currencies/xagg-try',
-    searchQuery: 'XAGg/TRY',
-    minPrice: 10,
-    maxPrice: 500,
-  },
-};
-
-const EMPTY_METAL = {
-  buyTRY: null,
-  sellTRY: null,
-  referenceTRY: null,
-  label: MARKET_SOURCE_LABEL,
-};
+const GOLD_LABEL = 'Gram altın piyasa verisi';
+const EMPTY_SILVER = { buyTRY: null, sellTRY: null, label: null };
 
 const EMPTY_MARKET = {
-  gold: { ...EMPTY_METAL },
-  silver: { ...EMPTY_METAL },
+  gold: { buyTRY: null, sellTRY: null, label: GOLD_LABEL },
+  silver: { ...EMPTY_SILVER },
   updatedAt: null,
-  source: 'investing.com',
+  source: 'auto',
   status: 'empty',
 };
 
-const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const PREFERRED_SILVER_BANKS = [
+  { key: 'dunya katilim', label: 'Dünya Katılım gümüş kuru' },
+  { key: 'vakif katilim', label: 'Vakıf Katılım gümüş kuru' },
+  { key: 'destekbank', label: 'DestekBank gümüş kuru' },
+];
 
 /** TR sayı formatını (6.307,25 / 101,07 / 6307.25) güvenli number'a çevirir. */
 function parseTRNumber(raw) {
@@ -80,218 +61,172 @@ function parseTRNumber(raw) {
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
 }
 
-function isCloudflareBlock(text) {
-  return typeof text === 'string' && (text.includes('Just a moment') || text.includes('cf-chl'));
-}
-
-function isReasonablePrice(value, minPrice, maxPrice) {
-  return typeof value === 'number' && value >= minPrice && value <= maxPrice;
-}
-
-function finalizeMetalQuote(raw, limits) {
-  const buyTRY = isReasonablePrice(raw.buyTRY, limits.minPrice, limits.maxPrice) ? raw.buyTRY : null;
-  const sellTRY = isReasonablePrice(raw.sellTRY, limits.minPrice, limits.maxPrice) ? raw.sellTRY : null;
-  const referenceTRY = isReasonablePrice(raw.referenceTRY, limits.minPrice, limits.maxPrice)
-    ? raw.referenceTRY
-    : null;
-
-  if (buyTRY != null && sellTRY != null && sellTRY > buyTRY) {
-    return { buyTRY, sellTRY, referenceTRY: null, label: MARKET_SOURCE_LABEL };
+function readField(obj, keys) {
+  if (!obj || typeof obj !== 'object') return undefined;
+  for (const key of keys) {
+    if (obj[key] != null && obj[key] !== '') return obj[key];
   }
-
-  if (referenceTRY != null) {
-    return { buyTRY: null, sellTRY: null, referenceTRY, label: MARKET_SOURCE_LABEL };
-  }
-
-  return { ...EMPTY_METAL };
+  return undefined;
 }
 
-function hasMetalData(metal) {
-  return (typeof metal?.buyTRY === 'number' && metal.buyTRY > 0)
-    || (typeof metal?.sellTRY === 'number' && metal.sellTRY > 0)
-    || (typeof metal?.referenceTRY === 'number' && metal.referenceTRY > 0);
+function normBankKey(name) {
+  return String(name).toLowerCase()
+    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }
 
-async function fetchWithTimeout(url, options = {}) {
+async function fetchJson(url) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...options, signal: ctrl.signal });
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function fetchText(url, headers) {
-  const res = await fetchWithTimeout(url, { headers });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  if (isCloudflareBlock(text)) throw new Error('Cloudflare engeli');
-  return text;
-}
-
-async function fetchJson(url, headers) {
-  const res = await fetchWithTimeout(url, { headers });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  if (isCloudflareBlock(text)) throw new Error('Cloudflare engeli');
-  return JSON.parse(text);
-}
-
-function investingPageHeaders(pageUrl) {
-  return {
-    'User-Agent': BROWSER_UA,
-    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-    Referer: pageUrl,
-  };
-}
-
-function investingTvcHeaders() {
-  return {
-    'User-Agent': BROWSER_UA,
-    Referer: 'https://tvc-invdn-com.investing.com/',
-    Accept: 'application/json,text/plain,*/*',
-    'Content-Type': 'application/json',
-  };
-}
-
-function investingTvcUrl(endpoint) {
-  return `https://tvc6.investing.com/${randomUUID().replace(/-/g, '')}/0/0/0/0/${endpoint}`;
-}
-
-async function investingTvcRequest(endpoint, params) {
-  const qs = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value != null) qs.set(key, String(value));
-  });
-  const url = `${investingTvcUrl(endpoint)}?${qs.toString()}`;
-  const data = await fetchJson(url, investingTvcHeaders());
-  if (endpoint === 'search') {
-    if (!Array.isArray(data)) throw new Error('Arama yanıtı geçersiz');
-    return data;
-  }
-  if (!data || data.s !== 'ok') throw new Error(`tvc6 ${endpoint} başarısız`);
-  return data;
-}
-
-function normalizeSearchKey(value) {
-  return String(value || '').toLowerCase().replace(/\s+/g, '');
-}
-
-async function resolveInvestingPairId(searchQuery) {
-  const results = await investingTvcRequest('search', {
-    query: searchQuery,
-    limit: 10,
-    type: 'FX',
-    exchange: '',
-  });
-
-  const target = normalizeSearchKey(searchQuery);
-  const hit = results.find((row) => normalizeSearchKey(row.symbol) === target)
-    || results.find((row) => normalizeSearchKey(row.description).includes(normalizeSearchKey(searchQuery)))
-    || results[0];
-
-  const pairId = Number.parseInt(hit?.ticker, 10);
-  return Number.isFinite(pairId) && pairId > 0 ? pairId : null;
-}
-
-function parseTvcQuotes(payload, limits) {
-  const row = Array.isArray(payload?.d)
-    ? payload.d.find((item) => item?.s === 'ok' && item?.v) || payload.d[0]
-    : null;
-  const values = row?.v;
-  if (!values || typeof values !== 'object') return { ...EMPTY_METAL };
-
-  return finalizeMetalQuote({
-    buyTRY: parseTRNumber(values.bid),
-    sellTRY: parseTRNumber(values.ask),
-    referenceTRY: parseTRNumber(values.lp ?? values.last ?? values.close ?? values.prev_close_price),
-  }, limits);
-}
-
-function parseInvestingHtmlQuote(html, limits) {
-  if (typeof html !== 'string' || isCloudflareBlock(html)) return { ...EMPTY_METAL };
-
-  let buyTRY = null;
-  let sellTRY = null;
-  let referenceTRY = null;
-
-  const bidTest = html.match(/data-test="instrument-price-bid"[^>]*>\s*([^<]+)/i);
-  const askTest = html.match(/data-test="instrument-price-ask"[^>]*>\s*([^<]+)/i);
-  if (bidTest) buyTRY = parseTRNumber(bidTest[1]);
-  if (askTest) sellTRY = parseTRNumber(askTest[1]);
-
-  const faqTr = html.match(/için alış fiyatı\s*([\d.,]+)\s*ve satış fiyatı:\s*([\d.,]+)/i);
-  if (faqTr) {
-    buyTRY = buyTRY ?? parseTRNumber(faqTr[1]);
-    sellTRY = sellTRY ?? parseTRNumber(faqTr[2]);
-  }
-
-  const faqEn = html.match(/bid price is\s*([\d.,]+)\s*and the ask price is\s*([\d.,]+)/i);
-  if (faqEn) {
-    buyTRY = buyTRY ?? parseTRNumber(faqEn[1]);
-    sellTRY = sellTRY ?? parseTRNumber(faqEn[2]);
-  }
-
-  const bidAskLine = html.match(/Bid\/Ask:\s*([\d.,]+)\s*\/\s*([\d.,]+)/i);
-  if (bidAskLine) {
-    buyTRY = buyTRY ?? parseTRNumber(bidAskLine[1]);
-    sellTRY = sellTRY ?? parseTRNumber(bidAskLine[2]);
-  }
-
-  const lastTest = html.match(/data-test="instrument-price-last"[^>]*>\s*([^<]+)/i);
-  if (lastTest) referenceTRY = parseTRNumber(lastTest[1]);
-
-  const faqLastTr = html.match(/kuru şu anda\s*([\d.,]+)\s*seviyesinden/i);
-  if (faqLastTr) referenceTRY = referenceTRY ?? parseTRNumber(faqLastTr[1]);
-
-  const faqLastEn = html.match(/exchange rate is\s*([\d.,]+),/i);
-  if (faqLastEn) referenceTRY = referenceTRY ?? parseTRNumber(faqLastEn[1]);
-
-  const jsonBidAsk = html.match(/"bid"\s*:\s*([\d.]+)[\s\S]{0,120}?"ask"\s*:\s*([\d.]+)/i);
-  if (jsonBidAsk) {
-    buyTRY = buyTRY ?? parseTRNumber(jsonBidAsk[1]);
-    sellTRY = sellTRY ?? parseTRNumber(jsonBidAsk[2]);
-  }
-
-  return finalizeMetalQuote({ buyTRY, sellTRY, referenceTRY }, limits);
-}
-
-async function fetchInvestingMetal(key, config) {
-  let quote = { ...EMPTY_METAL };
-  let lastError = null;
-
+async function fetchText(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const pairId = await resolveInvestingPairId(config.searchQuery);
-    if (pairId) {
-      const payload = await investingTvcRequest('quotes', { symbols: String(pairId) });
-      const parsed = parseTvcQuotes(payload, config);
-      if (hasMetalData(parsed)) return parsed;
-      lastError = new Error('tvc6 quotes boş döndü');
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Doviz-API: Altin = gram altın (serbest piyasa). */
+function parseGoldFromDoviz(payload) {
+  const item = payload?.data?.Altin;
+  if (!item || typeof item !== 'object') return { buyTRY: null, sellTRY: null };
+
+  return {
+    buyTRY: parseTRNumber(readField(item, ['Alis', 'alis', 'buy', 'buying'])),
+    sellTRY: parseTRNumber(readField(item, ['Satis', 'satis', 'sell', 'selling'])),
+  };
+}
+
+/** Zülfü Mehmet: ikinci dizi altın ürünleri; giramaltin = gram altın. */
+function parseGold(payload) {
+  const rows = Array.isArray(payload?.[1]) ? payload[1] : Array.isArray(payload) ? payload : [];
+  const item = rows.find((r) => {
+    if (!r || typeof r !== 'object') return false;
+    const code = String(r.kisaisim || r.code || '').toLowerCase();
+    const name = String(r.cinsi || r.name || '').toLowerCase();
+    return code === 'giramaltin' || code === 'gramaltin' || name.includes('gram altın') || name.includes('gram altin');
+  });
+
+  if (!item) return { buyTRY: null, sellTRY: null };
+
+  return {
+    buyTRY: parseTRNumber(readField(item, ['alis', 'Alis', 'buy', 'buying'])),
+    sellTRY: parseTRNumber(readField(item, ['satis', 'Satis', 'sell', 'selling'])),
+  };
+}
+
+function parseDovizComSilverRows(html) {
+  const rows = [];
+  const trRe = /<tr\b[\s\S]*?<\/tr>/gi;
+  let tr;
+  while ((tr = trRe.exec(html)) !== null) {
+    const block = tr[0];
+    if (!block.includes('data-socket-attr="bid"')) continue;
+
+    const bidM = block.match(/data-socket-attr="bid"[^>]*>\s*([^<]+?)\s*</i);
+    const askM = block.match(/data-socket-attr="ask"[^>]*>\s*([^<]+?)\s*</i);
+    if (!bidM || !askM) continue;
+
+    const buyTRY = parseTRNumber(bidM[1]);
+    const sellTRY = parseTRNumber(askM[1]);
+
+    let bankName = '';
+    const altM = block.match(/alt="([^"]+?)\s*Gram\s*G[uü]m[uü][şs]/i);
+    if (altM) bankName = altM[1].trim();
+    if (!bankName) {
+      const textM = block.match(/<a\b[^>]*>[\s\S]*?<img\b[^>]*>[\s\S]*?([^<]+?)<\/a>/i);
+      if (textM) bankName = textM[1].trim();
     }
-  } catch (err) {
-    lastError = err;
-    console.error(`${key} tvc6 hatası:`, err.message);
+
+    if (!bankName || buyTRY == null || sellTRY == null) continue;
+    rows.push({ bankName, buyTRY, sellTRY });
+  }
+  return rows;
+}
+
+function isReasonableSilverQuote(buyTRY, sellTRY) {
+  if (buyTRY == null || sellTRY == null) return false;
+  if (sellTRY <= buyTRY) return false;
+  if (buyTRY < 70 || sellTRY > 250) return false;
+  const spread = (sellTRY - buyTRY) / buyTRY;
+  return spread <= 0.2;
+}
+
+function median(nums) {
+  if (!nums.length) return null;
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[mid]
+    : Math.round(((sorted[mid - 1] + sorted[mid]) / 2) * 100) / 100;
+}
+
+function trimOutliers(rows) {
+  if (rows.length < 4) return rows;
+  const buys = rows.map((r) => r.buyTRY).sort((a, b) => a - b);
+  const sells = rows.map((r) => r.sellTRY).sort((a, b) => a - b);
+  const buyLo = buys[Math.floor(buys.length * 0.1)];
+  const buyHi = buys[Math.ceil(buys.length * 0.9) - 1];
+  const sellLo = sells[Math.floor(sells.length * 0.1)];
+  const sellHi = sells[Math.ceil(sells.length * 0.9) - 1];
+  return rows.filter((r) => r.buyTRY >= buyLo && r.buyTRY <= buyHi
+    && r.sellTRY >= sellLo && r.sellTRY <= sellHi);
+}
+
+/** altin.doviz.com: banka gram gümüş alış/satış tablosu. */
+function parseDovizComSilver(html) {
+  if (typeof html !== 'string') return { ...EMPTY_SILVER };
+
+  const rows = parseDovizComSilverRows(html).filter((r) => isReasonableSilverQuote(r.buyTRY, r.sellTRY));
+  if (!rows.length) return { ...EMPTY_SILVER };
+
+  for (const pref of PREFERRED_SILVER_BANKS) {
+    const hit = rows.find((r) => normBankKey(r.bankName).includes(pref.key));
+    if (hit) {
+      return { buyTRY: hit.buyTRY, sellTRY: hit.sellTRY, label: pref.label };
+    }
   }
 
-  try {
-    const html = await fetchText(config.pageUrl, investingPageHeaders(config.pageUrl));
-    const parsed = parseInvestingHtmlQuote(html, config);
-    if (hasMetalData(parsed)) return parsed;
-    lastError = new Error('HTML parse sonucu boş');
-  } catch (err) {
-    lastError = err;
-    console.error(`${key} HTML hatası:`, err.message);
+  const trimmed = trimOutliers(rows);
+  const pool = trimmed.length >= 3 ? trimmed : rows;
+  const buyTRY = median(pool.map((r) => r.buyTRY));
+  const sellTRY = median(pool.map((r) => r.sellTRY));
+  if (buyTRY == null || sellTRY == null || !isReasonableSilverQuote(buyTRY, sellTRY)) {
+    return { ...EMPTY_SILVER };
   }
 
-  if (lastError) console.error(`${key} için Investing verisi alınamadı.`);
-  return quote;
+  return { buyTRY, sellTRY, label: 'Temsilci banka gümüş kuru' };
+}
+
+function hasMetalPrices(metal) {
+  return (typeof metal?.buyTRY === 'number' && metal.buyTRY > 0)
+    || (typeof metal?.sellTRY === 'number' && metal.sellTRY > 0);
 }
 
 function resolveStatus(gold, silver) {
-  const g = hasMetalData(gold);
-  const s = hasMetalData(silver);
+  const g = hasMetalPrices(gold);
+  const s = hasMetalPrices(silver);
   if (g && s) return 'ok';
   if (g || s) return 'partial';
   return 'empty';
@@ -313,45 +248,83 @@ function writeMarket(market) {
   fs.writeFileSync(OUT_PATH, `${JSON.stringify(market, null, 2)}\n`, 'utf8');
 }
 
+function preserveExistingAndExit(existing) {
+  console.log('Yeni veri alınamadı, mevcut market.json korundu.');
+  process.exit(0);
+}
+
 async function main() {
   const existing = readExistingMarket();
+  let gold = { buyTRY: null, sellTRY: null, label: GOLD_LABEL };
+  let silver = { ...EMPTY_SILVER };
   let hadError = false;
 
-  const gold = await fetchInvestingMetal('gold', INVESTING_INSTRUMENTS.gold);
-  if (!hasMetalData(gold)) hadError = true;
+  try {
+    const goldPayload = await fetchJson(GOLD_DOVIZ_URL);
+    const parsed = parseGoldFromDoviz(goldPayload);
+    gold = { ...parsed, label: GOLD_LABEL };
+    if (!hasMetalPrices(gold)) {
+      const fallbackPayload = await fetchJson(GOLD_ZULFU_URL);
+      const fallback = parseGold(fallbackPayload);
+      gold = { ...fallback, label: GOLD_LABEL };
+    }
+  } catch (err) {
+    hadError = true;
+    console.error('Altın kaynağı hatası:', err.message);
+    try {
+      const fallbackPayload = await fetchJson(GOLD_ZULFU_URL);
+      const fallback = parseGold(fallbackPayload);
+      gold = { ...fallback, label: GOLD_LABEL };
+    } catch (fallbackErr) {
+      console.error('Altın yedek kaynağı hatası:', fallbackErr.message);
+      if (existing?.gold) gold = existing.gold;
+    }
+  }
 
-  const silver = await fetchInvestingMetal('silver', INVESTING_INSTRUMENTS.silver);
-  if (!hasMetalData(silver)) hadError = true;
+  try {
+    const html = await fetchText(SILVER_DOVIZ_COM_URL);
+    silver = parseDovizComSilver(html);
+    if (!hasMetalPrices(silver)) {
+      hadError = true;
+      console.error('Gümüş parse edilemedi; fiyat boş bırakıldı.');
+      silver = { ...EMPTY_SILVER };
+    }
+  } catch (err) {
+    hadError = true;
+    console.error('Gümüş kaynağı hatası:', err.message);
+    silver = { ...EMPTY_SILVER };
+  }
 
   const status = resolveStatus(gold, silver);
+
+  if (status === 'empty' && existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
+    preserveExistingAndExit(existing);
+  }
+
   const market = {
     gold,
     silver,
     updatedAt: status === 'empty' ? (existing?.updatedAt ?? null) : new Date().toISOString(),
-    source: 'investing.com',
+    source: 'auto',
     status,
   };
-
-  if (status === 'empty' && existing && (hasMetalData(existing.gold) || hasMetalData(existing.silver))) {
-    console.log('Yeni veri alınamadı; mevcut market.json korundu.');
-    process.exit(hadError ? 1 : 0);
-  }
 
   if (status !== 'empty') {
     market.updatedAt = new Date().toISOString();
   }
 
   writeMarket(market);
-  console.log(`market.json güncellendi (status: ${market.status}, kaynak: Investing.com).`);
-  if (hadError && status === 'empty') process.exit(1);
+  console.log(`market.json güncellendi (status: ${market.status}).`);
+  if (hadError) {
+    console.log('Bazı kaynaklar başarısız oldu; mevcut veriler yazıldı veya boş bırakıldı.');
+  }
 }
 
 main().catch((err) => {
   console.error('Beklenmeyen hata:', err.message);
   const existing = readExistingMarket();
-  if (existing) {
-    console.log('Mevcut market.json korundu.');
-    process.exit(1);
+  if (existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
+    preserveExistingAndExit(existing);
   }
   writeMarket({ ...EMPTY_MARKET });
   process.exit(1);

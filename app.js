@@ -404,14 +404,42 @@ function goldGramsByPurity(purity) {
 }
 
 /* ---------------- Tahmini değer (opsiyonel, ikincil) ---------------- */
+// Gram altın satış fiyatı 24 ayar referansıdır; diğer ayarlar oransal yaklaşık değerle hesaplanır.
+const GOLD_PURITY_VALUE_RATIO = {
+  '24': 1,
+  '22': 22 / 24,
+  '14': 14 / 24,
+};
+
 function marketSellPricePerGram(assetType) {
   const metal = marketFeed[assetType];
   return normalizeMarketPrice(metal?.sellTRY);
 }
 
-function estimateAssetValueTRY(assetType) {
-  const grams = totalGrams(assetType);
-  const price = marketSellPricePerGram(assetType);
+function estimateGoldValueTRY() {
+  const basePrice = marketSellPricePerGram('gold');
+  if (basePrice == null) {
+    return { value: null, hasPrice: false, breakdown: [] };
+  }
+
+  const breakdown = GOLD_PURITY_ORDER.map((purity) => {
+    const grams = goldGramsByPurity(purity);
+    if (grams <= 0) return null;
+    return {
+      purity,
+      label: purityLabel(purity),
+      grams,
+      value: grams * basePrice * GOLD_PURITY_VALUE_RATIO[purity],
+    };
+  }).filter(Boolean);
+
+  const value = breakdown.reduce((sum, row) => sum + row.value, 0);
+  return { value, hasPrice: true, breakdown };
+}
+
+function estimateSilverValueTRY() {
+  const grams = totalGrams('silver');
+  const price = marketSellPricePerGram('silver');
   if (price == null) return { value: null, hasPrice: false, grams };
   return { value: grams * price, hasPrice: true, grams };
 }
@@ -419,6 +447,18 @@ function estimateAssetValueTRY(assetType) {
 function formatEstimateAmount(est) {
   if (!est.hasPrice) return 'Fiyat bilgisi alınamadı';
   return formatTRY(est.value);
+}
+
+function goldEstimateBreakdownHtml(breakdown) {
+  if (!breakdown.length) return '';
+  const rows = breakdown.map((row) => (
+    `<li class="estimate-breakdown-row"><span>${escapeHtml(row.label)}</span><span>${escapeHtml(formatTRY(row.value))}</span></li>`
+  )).join('');
+  return `
+    <li class="estimate-breakdown-item">
+      <p class="estimate-breakdown-title">Altın kırılımı:</p>
+      <ul class="estimate-breakdown">${rows}</ul>
+    </li>`;
 }
 
 function formatTRY(n) {
@@ -749,8 +789,8 @@ function renderEstimatePanel() {
   panel.classList.toggle('hidden', !show);
   if (!show) { panel.innerHTML = ''; return; }
 
-  const gold = estimateAssetValueTRY('gold');
-  const silver = estimateAssetValueTRY('silver');
+  const gold = estimateGoldValueTRY();
+  const silver = estimateSilverValueTRY();
   let total = 0;
   let hasTotal = false;
   if (gold.hasPrice) { total += gold.value; hasTotal = true; }
@@ -762,6 +802,7 @@ function renderEstimatePanel() {
   const silverValueHtml = silver.hasPrice
     ? `<strong>${escapeHtml(formatEstimateAmount(silver))}</strong>`
     : `<span class="estimate-unavailable">${escapeHtml(formatEstimateAmount(silver))}</span>`;
+  const goldBreakdownHtml = gold.hasPrice ? goldEstimateBreakdownHtml(gold.breakdown) : '';
   const totalRow = hasTotal
     ? `<li class="estimate-row estimate-row-total"><span>Toplam Yaklaşık Değer</span><strong>${escapeHtml(formatTRY(total))}</strong></li>`
     : '';
@@ -771,12 +812,13 @@ function renderEstimatePanel() {
 
   panel.innerHTML = `
     <ul class="estimate-list">
-      <li class="estimate-row"><span>🥇 Bugünkü Yaklaşık Altın Değeri</span>${goldValueHtml}</li>
-      <li class="estimate-row"><span>🥈 Bugünkü Yaklaşık Gümüş Değeri</span>${silverValueHtml}</li>
+      <li class="estimate-row estimate-row-main"><span>🥇 Bugünkü Yaklaşık Altın Değeri</span>${goldValueHtml}</li>
+      ${goldBreakdownHtml}
+      <li class="estimate-row estimate-row-main"><span>🥈 Bugünkü Yaklaşık Gümüş Değeri</span>${silverValueHtml}</li>
       ${totalRow}
     </ul>
     ${updatedLine}
-    <p class="estimate-note">Bu değer bilgilendirme amaçlı yaklaşık değerdir. Alım-satım kanallarına göre değişebilir.</p>`;
+    <p class="estimate-note">Bu değer bilgilendirme amaçlı yaklaşık değerdir. Alım-satım kanallarına göre değişebilir. Altın ayarına göre yaklaşık hesaplanır; işçilik ve ürün farkları dahil değildir.</p>`;
 }
 
 /* ---------------- Kayıt listesi render ---------------- */

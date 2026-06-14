@@ -920,6 +920,43 @@ body {
   border: 1px solid rgba(202, 161, 47, 0.3);
 }
 .estimate-row-total strong { color: var(--primary-hover); }
+.estimate-breakdown-item {
+  list-style: none;
+  margin: -2px 0 6px;
+  padding: 0 0 4px 8px;
+  border-left: 2px solid rgba(202, 161, 47, 0.22);
+}
+
+.estimate-breakdown-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.estimate-breakdown {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.estimate-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.estimate-breakdown-row span:last-child {
+  font-weight: 700;
+  color: var(--text);
+}
+
 .estimate-unavailable {
   font-size: 0.82rem;
   font-weight: 600;

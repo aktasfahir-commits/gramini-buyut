@@ -106,20 +106,17 @@ const DEFAULT_PRICE_STATE = {
 // Veri kaynağı: data/market.json (GitHub Actions → scripts/update-market.js)
 // TODO: Günlük Piyasa kartı kullanıcı tarafından gizlenebilir yapılacak.
 // marketFeed yalnızca ana ekrandaki Günlük Piyasa kartı içindir; priceState ile karışmaz.
-const MARKET_SOURCE_LABEL = 'Investing.com piyasa verisi';
-
 const EMPTY_MARKET_METAL = {
   buyTRY: null,
   sellTRY: null,
-  referenceTRY: null,
-  label: MARKET_SOURCE_LABEL,
+  label: null,
 };
 
 const EMPTY_MARKET_FEED = {
   gold: { ...EMPTY_MARKET_METAL },
   silver: { ...EMPTY_MARKET_METAL },
   updatedAt: null,
-  source: 'investing.com',
+  source: 'auto',
   status: 'empty',
 };
 
@@ -541,8 +538,7 @@ function parseMarketMetal(raw) {
   return {
     buyTRY: normalizeMarketPrice(metal.buyTRY),
     sellTRY: normalizeMarketPrice(metal.sellTRY),
-    referenceTRY: normalizeMarketPrice(metal.referenceTRY),
-    label: typeof metal.label === 'string' && metal.label.trim() ? metal.label.trim() : MARKET_SOURCE_LABEL,
+    label: typeof metal.label === 'string' && metal.label.trim() ? metal.label.trim() : null,
   };
 }
 
@@ -552,7 +548,7 @@ function parseMarketFeed(raw) {
     gold: parseMarketMetal(raw.gold),
     silver: parseMarketMetal(raw.silver),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
-    source: typeof raw.source === 'string' ? raw.source : 'investing.com',
+    source: typeof raw.source === 'string' ? raw.source : 'auto',
     status: typeof raw.status === 'string' ? raw.status : 'empty',
   };
 }
@@ -561,17 +557,13 @@ function hasMarketMetalPrices(metal) {
   return normalizeMarketPrice(metal?.buyTRY) != null || normalizeMarketPrice(metal?.sellTRY) != null;
 }
 
-function hasMarketMetalData(metal) {
-  return hasMarketMetalPrices(metal) || normalizeMarketPrice(metal?.referenceTRY) != null;
-}
-
 function marketPriceText(value) {
   const n = normalizeMarketPrice(value);
   return n != null ? formatMarketTRY(n) : '—';
 }
 
 function marketMetalBlock(title, metal) {
-  if (!hasMarketMetalData(metal)) {
+  if (!hasMarketMetalPrices(metal)) {
     return `
     <div class="market-asset">
       <p class="market-asset-name">${escapeHtml(title)}</p>
@@ -579,17 +571,16 @@ function marketMetalBlock(title, metal) {
     </div>`;
   }
 
-  const sourceLine = `<p class="market-asset-source">${escapeHtml(metal.label || MARKET_SOURCE_LABEL)}</p>`;
-  const priceLines = hasMarketMetalPrices(metal)
-    ? `<p class="market-price-line">Alış: <span>${escapeHtml(marketPriceText(metal.buyTRY))}</span></p>
-      <p class="market-price-line">Satış: <span>${escapeHtml(marketPriceText(metal.sellTRY))}</span></p>`
-    : `<p class="market-price-line">Referans: <span>${escapeHtml(marketPriceText(metal.referenceTRY))}</span></p>`;
+  const sourceLine = metal?.label
+    ? `<p class="market-asset-source">${escapeHtml(metal.label)}</p>`
+    : '';
 
   return `
     <div class="market-asset">
       <p class="market-asset-name">${escapeHtml(title)}</p>
       ${sourceLine}
-      ${priceLines}
+      <p class="market-price-line">Alış: <span>${escapeHtml(marketPriceText(metal.buyTRY))}</span></p>
+      <p class="market-price-line">Satış: <span>${escapeHtml(marketPriceText(metal.sellTRY))}</span></p>
     </div>`;
 }
 
@@ -597,8 +588,8 @@ function marketMetalBlock(title, metal) {
 function renderMarketCard() {
   const body = document.getElementById('market-card-body');
   const m = marketFeed;
-  const hasGold = hasMarketMetalData(m.gold);
-  const hasSilver = hasMarketMetalData(m.silver);
+  const hasGold = hasMarketMetalPrices(m.gold);
+  const hasSilver = hasMarketMetalPrices(m.silver);
 
   if (!hasGold && !hasSilver) {
     body.innerHTML = '<p class="market-unavailable">Fiyat bilgisi alınamadı</p>';

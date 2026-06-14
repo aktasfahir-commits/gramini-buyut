@@ -1,13 +1,13 @@
 {
   "gold": {
-    "buyTRY": 6307.25,
-    "sellTRY": 6395.03
+    "buyTRY": 6276.26,
+    "sellTRY": 6277.08
   },
   "silver": {
-    "buyTRY": 134.75,
-    "sellTRY": 134.77
+    "buyTRY": 101.07,
+    "sellTRY": 101.2
   },
-  "updatedAt": "2026-06-14T07:13:09.715Z",
+  "updatedAt": "2026-06-14T07:54:05.788Z",
   "source": "auto",
   "status": "ok"
 }

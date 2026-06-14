@@ -85,11 +85,10 @@ const MOTIVATION_CARDS = [
   { id: 'm8', type: 'genel', text: 'Tohumlar fidana, gramlar eve, arabaya, tatile dönmeli yurdumda.' },
 ];
 
-/* ---------------- Fiyat altyapısı (V1: canlı API yok) ---------------- */
-// TODO: Güncel altın ve gümüş fiyatları güvenilir bir API'den çekilecek. (V2)
-// V1'de canlı fiyat entegrasyonu YOK. Değerler manuel/demo olabilir veya boş kalır.
-// Ana ekranda asla TL gösterilmez; tahmini değer yalnızca "Toplam Birikimim"
-// ekranında, kullanıcı açıkça isterse gösterilir. Gram önce gelir, TL değeri sonra.
+/* ---------------- Fiyat / tahmini değer ---------------- */
+// Ana ekranda asla TL gösterilmez. Tahmini değer yalnızca "Toplam Birikimim" ekranında,
+// kullanıcı toggle açarsa görünür. Kaynak: marketFeed (data/market.json satış fiyatları).
+// priceState: eski localStorage şeması uyumluluğu için saklanır; tahmin hesabında kullanılmaz.
 const DEFAULT_PRICE_STATE = {
   gold24BuyPricePerGramTRY: null,
   gold22BuyPricePerGramTRY: null,
@@ -98,15 +97,9 @@ const DEFAULT_PRICE_STATE = {
   updatedAt: null,
 };
 
-// Demo değer denemek istersen yukarıdaki null'ları sayıyla değiştir, örn:
-// gold24BuyPricePerGramTRY: 4250, gold22BuyPricePerGramTRY: 3900,
-// gold14BuyPricePerGramTRY: 2500, silverPricePerGramTRY: 45, updatedAt: '2026-06-13'
-// TEK KAYNAK: fiyatlar yalnızca data.priceState içinde tutulur (ayrı modül değişkeni yok).
-
-/* ---------------- Günlük Piyasa (ana ekran bilgi kartı) ---------------- */
+/* ---------------- Günlük Piyasa (ana ekran bilgi kartı + tahmini değer) ---------------- */
 // Veri kaynağı: data/market.json (GitHub Actions → scripts/update-market.js)
 // TODO: Günlük Piyasa kartı kullanıcı tarafından gizlenebilir yapılacak.
-// marketFeed yalnızca ana ekrandaki Günlük Piyasa kartı içindir; priceState ile karışmaz.
 const EMPTY_MARKET_METAL = {
   buyTRY: null,
   sellTRY: null,
@@ -411,11 +404,22 @@ function goldGramsByPurity(purity) {
 }
 
 /* ---------------- Tahmini değer (opsiyonel, ikincil) ---------------- */
-const PURITY_PRICE_KEY = {
-  '24': 'gold24BuyPricePerGramTRY',
-  '22': 'gold22BuyPricePerGramTRY',
-  '14': 'gold14BuyPricePerGramTRY',
-};
+function marketSellPricePerGram(assetType) {
+  const metal = marketFeed[assetType];
+  return normalizeMarketPrice(metal?.sellTRY);
+}
+
+function estimateAssetValueTRY(assetType) {
+  const grams = totalGrams(assetType);
+  const price = marketSellPricePerGram(assetType);
+  if (price == null) return { value: null, hasPrice: false, grams };
+  return { value: grams * price, hasPrice: true, grams };
+}
+
+function formatEstimateAmount(est) {
+  if (!est.hasPrice) return 'Fiyat bilgisi alınamadı';
+  return formatTRY(est.value);
+}
 
 function formatTRY(n) {
   return (Number(n) || 0).toLocaleString('tr-TR', {
@@ -433,33 +437,6 @@ function formatMarketTRY(n) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-}
-
-function hasAnyPrice() {
-  return Object.values(PURITY_PRICE_KEY)
-    .concat('silverPricePerGramTRY')
-    .some((k) => typeof data.priceState[k] === 'number' && data.priceState[k] > 0);
-}
-
-function estimateGoldValueTRY() {
-  let value = 0;
-  let ok = true;
-  GOLD_PURITY_ORDER.forEach((p) => {
-    const grams = goldGramsByPurity(p);
-    if (grams <= 0) return;
-    const price = data.priceState[PURITY_PRICE_KEY[p]];
-    if (typeof price !== 'number' || price <= 0) { ok = false; return; }
-    value += grams * price;
-  });
-  return { value, ok };
-}
-
-function estimateSilverValueTRY() {
-  const grams = totalGrams('silver');
-  if (grams <= 0) return { value: 0, ok: true };
-  const price = data.priceState.silverPricePerGramTRY;
-  if (typeof price !== 'number' || price <= 0) return { value: 0, ok: false };
-  return { value: grams * price, ok: true };
 }
 
 function monthGrams(assetType, ym) {
@@ -747,6 +724,7 @@ async function loadMarketFeed() {
     if (!parsed) return;
     marketFeed = parsed;
     renderMarketCard();
+    renderEstimatePanel();
   } catch {
     // Sessizce kal; kart boş durum mesajını gösterir.
   }
@@ -771,24 +749,34 @@ function renderEstimatePanel() {
   panel.classList.toggle('hidden', !show);
   if (!show) { panel.innerHTML = ''; return; }
 
-  const gold = estimateGoldValueTRY();
-  const silver = estimateSilverValueTRY();
+  const gold = estimateAssetValueTRY('gold');
+  const silver = estimateAssetValueTRY('silver');
+  let total = 0;
+  let hasTotal = false;
+  if (gold.hasPrice) { total += gold.value; hasTotal = true; }
+  if (silver.hasPrice) { total += silver.value; hasTotal = true; }
 
-  // Fiyat verisi yoksa veya tutan varlık için fiyat eksikse bilgilendirici mesaj.
-  if (!hasAnyPrice() || !gold.ok || !silver.ok) {
-    panel.innerHTML = `<p class="estimate-empty">Değer hesaplaması için fiyat bilgisi henüz eklenmedi.</p>`;
-    return;
-  }
+  const goldValueHtml = gold.hasPrice
+    ? `<strong>${escapeHtml(formatEstimateAmount(gold))}</strong>`
+    : `<span class="estimate-unavailable">${escapeHtml(formatEstimateAmount(gold))}</span>`;
+  const silverValueHtml = silver.hasPrice
+    ? `<strong>${escapeHtml(formatEstimateAmount(silver))}</strong>`
+    : `<span class="estimate-unavailable">${escapeHtml(formatEstimateAmount(silver))}</span>`;
+  const totalRow = hasTotal
+    ? `<li class="estimate-row estimate-row-total"><span>Toplam Yaklaşık Değer</span><strong>${escapeHtml(formatTRY(total))}</strong></li>`
+    : '';
+  const updatedLine = marketFeed.updatedAt
+    ? `<p class="estimate-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(marketFeed.updatedAt))}</p>`
+    : '';
 
-  const total = gold.value + silver.value;
   panel.innerHTML = `
-    <p class="estimate-lead">Bugünkü tahmini değer</p>
     <ul class="estimate-list">
-      <li class="estimate-row"><span>🥇 Tahmini Altın Değeri</span><strong>${escapeHtml(formatTRY(gold.value))}</strong></li>
-      <li class="estimate-row"><span>🥈 Tahmini Gümüş Değeri</span><strong>${escapeHtml(formatTRY(silver.value))}</strong></li>
-      <li class="estimate-row estimate-row-total"><span>Toplam Tahmini Değer</span><strong>${escapeHtml(formatTRY(total))}</strong></li>
+      <li class="estimate-row"><span>🥇 Bugünkü Yaklaşık Altın Değeri</span>${goldValueHtml}</li>
+      <li class="estimate-row"><span>🥈 Bugünkü Yaklaşık Gümüş Değeri</span>${silverValueHtml}</li>
+      ${totalRow}
     </ul>
-    <p class="estimate-note">Gram önce gelir, değer sonra. Tahmini değer bilgilendirme amaçlıdır.</p>`;
+    ${updatedLine}
+    <p class="estimate-note">Bu değer bilgilendirme amaçlı yaklaşık değerdir. Alım-satım kanallarına göre değişebilir.</p>`;
 }
 
 /* ---------------- Kayıt listesi render ---------------- */

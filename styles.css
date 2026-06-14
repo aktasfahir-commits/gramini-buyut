@@ -920,7 +920,19 @@ body {
   border: 1px solid rgba(202, 161, 47, 0.3);
 }
 .estimate-row-total strong { color: var(--primary-hover); }
-.estimate-note { font-size: 0.76rem; color: var(--text-muted); margin-top: 10px; text-align: center; }
+.estimate-unavailable {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.estimate-updated {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.estimate-note { font-size: 0.76rem; color: var(--text-muted); margin-top: 10px; text-align: center; line-height: 1.45; }
 
 .savings-list-title {
   font-size: 0.85rem;

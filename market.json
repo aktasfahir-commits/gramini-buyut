@@ -1,14 +1,17 @@
 {
   "gold": {
     "buyTRY": null,
-    "sellTRY": null
+    "sellTRY": null,
+    "referenceTRY": null,
+    "label": "Investing.com piyasa verisi"
   },
   "silver": {
     "buyTRY": null,
     "sellTRY": null,
-    "label": null
+    "referenceTRY": null,
+    "label": "Investing.com piyasa verisi"
   },
   "updatedAt": null,
-  "source": "auto",
+  "source": "investing.com",
   "status": "empty"
 }

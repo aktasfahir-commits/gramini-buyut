@@ -345,15 +345,22 @@ function normalizeGoal(g) {
   };
 }
 
-/** V1: tek aktif hedef. */
+/** Varlık türü başına en fazla bir hedef; duplicate varsa en güncel createdAt kalır. */
 function normalizeGoals(arr) {
   if (!Array.isArray(arr)) return [];
-  const goals = arr.map(normalizeGoal).filter(Boolean);
-  return goals.length ? [goals[0]] : [];
+  const byType = new Map();
+  arr.map(normalizeGoal).filter(Boolean).forEach((goal) => {
+    const prev = byType.get(goal.assetType);
+    if (!prev || goal.createdAt >= prev.createdAt) byType.set(goal.assetType, goal);
+  });
+  const out = [];
+  if (byType.has('gold')) out.push(byType.get('gold'));
+  if (byType.has('silver')) out.push(byType.get('silver'));
+  return out;
 }
 
-function getActiveGoal() {
-  return data.goals[0] || null;
+function getGoalByAssetType(assetType) {
+  return data.goals.find((g) => g.assetType === assetType) || null;
 }
 
 function formatGoalGramValue(n) {
@@ -583,42 +590,62 @@ function renderMotivation() {
   document.getElementById('motivation-text').textContent = card.text;
 }
 
+function renderGoalItemHtml(goal) {
+  const { current, target, percent, completed } = getGoalProgress(goal);
+  const asset = ASSET_TYPES[goal.assetType];
+  const statusLine = completed
+    ? '<p class="goal-item-done">Hedef tamamlandı 🎉</p>'
+    : '<p class="goal-item-motivation">Hedefine yaklaşıyorsun.</p>';
+
+  return `
+    <article class="goal-item goal-item--${goal.assetType}">
+      <div class="goal-item-head">
+        <span class="goal-item-icon" aria-hidden="true">${asset.icon}</span>
+        <p class="goal-item-subtitle">${escapeHtml(goal.title)}</p>
+      </div>
+      <p class="goal-item-progress">${escapeHtml(formatGoalProgressLine(current, target))}</p>
+      <p class="goal-item-percent">%${percent} tamamlandı</p>
+      <div class="goal-progress" aria-hidden="true">
+        <div class="goal-progress-fill" style="width:${percent}%"></div>
+      </div>
+      ${statusLine}
+      <button type="button" class="btn btn-ghost btn-block goal-item-edit" data-goal-edit="${goal.assetType}">Düzenle</button>
+    </article>`;
+}
+
 function renderGoalCard() {
   const card = document.getElementById('goal-card');
-  const goal = getActiveGoal();
+  const goldGoal = getGoalByAssetType('gold');
+  const silverGoal = getGoalByAssetType('silver');
+  const goals = [goldGoal, silverGoal].filter(Boolean);
 
-  if (!goal) {
+  if (!goals.length) {
     card.className = 'goal-card';
     card.innerHTML = `
       <h2 class="goal-card-title">Hedefim</h2>
       <p class="goal-card-lead">Gramların bir hedefe dönüşsün.</p>
       <button type="button" class="btn btn-ghost btn-block" id="open-goal-btn">Hedef Belirle</button>`;
-    document.getElementById('open-goal-btn').addEventListener('click', () => openGoalModal(false));
+    document.getElementById('open-goal-btn').addEventListener('click', () => openGoalModal(false, 'gold'));
     return;
   }
 
-  const { current, target, percent, completed } = getGoalProgress(goal);
-  const asset = ASSET_TYPES[goal.assetType];
-  const statusLine = completed
-    ? '<p class="goal-card-done">Hedef tamamlandı 🎉</p>'
-    : '<p class="goal-card-motivation">Hedefine yaklaşıyorsun.</p>';
+  const missingAsset = !goldGoal ? 'gold' : !silverGoal ? 'silver' : null;
+  const addBtn = missingAsset
+    ? '<button type="button" class="btn btn-ghost btn-block goal-card-add-btn" id="open-goal-btn">Hedef Belirle</button>'
+    : '';
 
-  card.className = `goal-card goal-card--${goal.assetType}`;
+  card.className = 'goal-card goal-card--multi';
   card.innerHTML = `
-    <div class="goal-card-head">
-      <h2 class="goal-card-title">Hedefim</h2>
-      <span class="goal-card-icon" aria-hidden="true">${asset.icon}</span>
-    </div>
-    <p class="goal-card-subtitle">${escapeHtml(goal.title)}</p>
-    <p class="goal-card-progress">${escapeHtml(formatGoalProgressLine(current, target))}</p>
-    <p class="goal-card-percent">%${percent} tamamlandı</p>
-    <div class="goal-progress" aria-hidden="true">
-      <div class="goal-progress-fill" style="width:${percent}%"></div>
-    </div>
-    ${statusLine}
-    <button type="button" class="btn btn-ghost btn-block goal-card-edit" id="open-goal-edit-btn">Düzenle</button>`;
+    <h2 class="goal-card-title">Hedefim</h2>
+    ${goals.map(renderGoalItemHtml).join('<div class="goal-item-divider" aria-hidden="true"></div>')}
+    ${addBtn}`;
 
-  document.getElementById('open-goal-edit-btn').addEventListener('click', () => openGoalModal(true));
+  card.querySelectorAll('[data-goal-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => openGoalModal(true, btn.dataset.goalEdit));
+  });
+  if (missingAsset) {
+    document.getElementById('open-goal-btn').addEventListener('click', () => openGoalModal(false, missingAsset));
+  }
 }
 
 function formatMarketUpdatedAt(iso) {
@@ -1106,37 +1133,72 @@ function setGoalFormAsset(asset) {
   document.querySelectorAll('#goal-asset-segment .segment-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.asset === goalFormAsset);
   });
+  if (!editingGoal) applyGoalFormFields();
+  updateGoalAssetSegmentState();
 }
 
-function openGoalModal(isEdit) {
+function updateGoalAssetSegmentState() {
+  const segment = document.getElementById('goal-asset-segment');
+  segment.classList.toggle('segment--locked', editingGoal);
+}
+
+function applyGoalFormFields() {
+  const goal = getGoalByAssetType(goalFormAsset);
+  const titleInput = document.getElementById('goal-title');
+  const gramsInput = document.getElementById('goal-target-grams');
+
+  if (editingGoal && goal) {
+    titleInput.value = goal.title;
+    gramsInput.value = String(goal.targetGrams);
+    return;
+  }
+
+  if (goal) {
+    titleInput.value = goal.title;
+    gramsInput.value = String(goal.targetGrams);
+  } else {
+    titleInput.value = '';
+    gramsInput.value = '';
+  }
+}
+
+function openGoalModal(isEdit, preferredAsset = 'gold') {
   editingGoal = isEdit;
-  const goal = getActiveGoal();
+  goalFormAsset = preferredAsset === 'silver' ? 'silver' : 'gold';
+  const goal = getGoalByAssetType(goalFormAsset);
   const overlay = document.getElementById('goal-overlay');
   const titleEl = document.getElementById('goal-modal-title');
   const deleteBtn = document.getElementById('goal-delete-btn');
   const form = document.getElementById('goal-form');
 
   titleEl.textContent = isEdit ? 'Hedefi Düzenle' : 'Hedef Belirle';
-  deleteBtn.classList.toggle('hidden', !isEdit);
+  deleteBtn.classList.toggle('hidden', !isEdit || !goal);
 
-  if (isEdit && goal) {
-    goalFormAsset = goal.assetType;
-    document.getElementById('goal-title').value = goal.title;
-    document.getElementById('goal-target-grams').value = String(goal.targetGrams);
+  if (isEdit) {
+    applyGoalFormFields();
   } else {
-    goalFormAsset = 'gold';
     form.reset();
-    document.getElementById('goal-target-grams').value = '';
+    applyGoalFormFields();
   }
 
   setGoalFormAsset(goalFormAsset);
+  updateGoalAssetSegmentState();
   overlay.classList.remove('hidden');
   setTimeout(() => document.getElementById('goal-title').focus(), 60);
 }
 
 function closeGoalModal() {
   editingGoal = false;
+  updateGoalAssetSegmentState();
   document.getElementById('goal-overlay').classList.add('hidden');
+}
+
+function upsertGoal(goal) {
+  if (!goal) return;
+  const idx = data.goals.findIndex((g) => g.assetType === goal.assetType);
+  if (idx >= 0) data.goals[idx] = goal;
+  else data.goals.push(goal);
+  data.goals = normalizeGoals(data.goals);
 }
 
 function submitGoalForm() {
@@ -1152,8 +1214,7 @@ function submitGoalForm() {
     return;
   }
 
-  const existing = getActiveGoal();
-  const wasEditing = editingGoal;
+  const existing = getGoalByAssetType(goalFormAsset);
   const goal = normalizeGoal({
     id: existing?.id,
     assetType: goalFormAsset,
@@ -1162,15 +1223,15 @@ function submitGoalForm() {
     createdAt: existing?.createdAt,
   });
 
-  data.goals = goal ? [goal] : [];
+  upsertGoal(goal);
   saveData();
   closeGoalModal();
   renderGoalCard();
-  showToast(wasEditing ? 'Hedef güncellendi.' : 'Hedefin kaydedildi.');
+  showToast(existing ? 'Hedef güncellendi.' : 'Hedefin kaydedildi.');
 }
 
 function deleteGoal() {
-  data.goals = [];
+  data.goals = data.goals.filter((g) => g.assetType !== goalFormAsset);
   saveData();
   closeGoalModal();
   renderGoalCard();

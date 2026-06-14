@@ -395,6 +395,77 @@ body {
 
 .goal-card-edit { margin-top: 2px; }
 
+.goal-card--multi .goal-card-title {
+  margin-bottom: 12px;
+}
+
+.goal-item-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+.goal-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.goal-item-icon { font-size: 1.1rem; line-height: 1; }
+
+.goal-item-subtitle {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0;
+  flex: 1;
+}
+
+.goal-item--gold .goal-item-subtitle { color: var(--gold-ink); }
+.goal-item--silver .goal-item-subtitle { color: #4a5d6b; }
+
+.goal-item-progress {
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.goal-item-percent {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+
+.goal-item--silver .goal-progress {
+  background: rgba(140, 155, 170, 0.18);
+}
+
+.goal-item--silver .goal-progress-fill {
+  background: linear-gradient(90deg, #8b9bab, #6f8496);
+}
+
+.goal-item-motivation,
+.goal-item-done {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.goal-item-motivation { color: var(--primary-hover); }
+.goal-item-done { color: var(--gold-ink); }
+
+.goal-item-edit { margin-top: 2px; }
+
+.goal-card-add-btn { margin-top: 4px; }
+
+.segment--locked .segment-btn:not(.active) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .goal-form {
   display: flex;
   flex-direction: column;

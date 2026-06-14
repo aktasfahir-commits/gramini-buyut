@@ -4,10 +4,10 @@
     "sellTRY": null
   },
   "silver": {
-    "buyTRY": null,
-    "sellTRY": null
+    "buyTRY": 134.75,
+    "sellTRY": 134.77
   },
-  "updatedAt": null,
+  "updatedAt": "2026-06-14T05:47:51.220Z",
   "source": "auto",
-  "status": "empty"
+  "status": "partial"
 }

@@ -1,4 +1,4 @@
-
+/*
  * Günlük Piyasa verisi üretici.
  * GitHub Actions veya yerelde: node scripts/update-market.js
  *

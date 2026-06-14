@@ -2,7 +2,7 @@
    Felsefe: Fiyatlar değişir. Gramlar kalır. */
 
 const STORAGE_KEY = 'gramini-buyut';
-const DATA_VERSION = 2;
+const DATA_VERSION = 3;
 
 /* ---------------- Varlık türleri ---------------- */
 // fixed: true → birim gram sabittir, gram = unitGrams × quantity (otomatik).
@@ -127,6 +127,7 @@ function emptyData() {
   return {
     version: DATA_VERSION,
     records: [],
+    goals: [],
     settings: { showEstimatedValue: false, name: null, nameAsked: false },
     priceState: { ...DEFAULT_PRICE_STATE },
   };
@@ -137,6 +138,7 @@ let formAsset = 'gold';          // kayıt formundaki aktif varlık
 let formPurity = '24';           // altın seçiliyken aktif ayar sınıfı
 let editRecordId = null;         // düzenleme modundaysak kayıt id'si
 let deleteRecordId = null;
+let editingGoal = false;
 
 /* ---------------- Tarih yardımcıları ---------------- */
 function today() {
@@ -238,9 +240,22 @@ function loadData() {
       data = {
         version: DATA_VERSION,
         records: parsed.records.map(normalizeRecord).filter(isValidRecord),
+        goals: normalizeGoals(parsed.goals),
         settings,
         priceState,
       };
+      return;
+    }
+
+    if (parsed.version === 2) {
+      data = {
+        version: DATA_VERSION,
+        records: parsed.records.map(normalizeRecord).filter(isValidRecord),
+        goals: normalizeGoals(parsed.goals),
+        settings,
+        priceState,
+      };
+      saveData();
       return;
     }
 
@@ -248,6 +263,7 @@ function loadData() {
       data = {
         version: DATA_VERSION,
         records: parsed.records.map(migrateRecordV1toV2).filter(isValidRecord),
+        goals: normalizeGoals(parsed.goals),
         settings,
         priceState,
       };
@@ -312,6 +328,56 @@ function isValidRecord(r) {
     && typeof r.itemType === 'string'
     && Number(r.grams) > 0
     && typeof r.date === 'string';
+}
+
+function normalizeGoal(g) {
+  if (!g || typeof g !== 'object') return null;
+  const assetType = g.assetType === 'silver' ? 'silver' : g.assetType === 'gold' ? 'gold' : null;
+  const targetGrams = Number(g.targetGrams);
+  const title = typeof g.title === 'string' ? g.title.trim() : '';
+  if (!assetType || !title || !(targetGrams > 0)) return null;
+  return {
+    id: typeof g.id === 'string' && g.id ? g.id : generateId(),
+    assetType,
+    title: title.slice(0, 80),
+    targetGrams: Math.round(targetGrams * 100) / 100,
+    createdAt: typeof g.createdAt === 'string' ? g.createdAt : new Date().toISOString(),
+  };
+}
+
+/** V1: tek aktif hedef. */
+function normalizeGoals(arr) {
+  if (!Array.isArray(arr)) return [];
+  const goals = arr.map(normalizeGoal).filter(Boolean);
+  return goals.length ? [goals[0]] : [];
+}
+
+function getActiveGoal() {
+  return data.goals[0] || null;
+}
+
+function formatGoalGramValue(n) {
+  const num = Number(n) || 0;
+  const rounded = Math.round(num * 100) / 100;
+  if (Number.isInteger(rounded)) return rounded.toLocaleString('tr-TR');
+  return rounded.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatGoalProgressLine(current, target) {
+  return `${formatGoalGramValue(current)} / ${formatGoalGramValue(target)} gr`;
+}
+
+function getGoalProgress(goal) {
+  const current = totalGrams(goal.assetType);
+  const target = goal.targetGrams;
+  const ratio = target > 0 ? current / target : 0;
+  const percent = Math.min(100, Math.floor(ratio * 100));
+  return {
+    current,
+    target,
+    percent,
+    completed: current >= target,
+  };
 }
 
 function saveData() {
@@ -430,6 +496,7 @@ function renderHome() {
   renderGreeting();
   renderGoldPurityBreakdown();
   renderJourney();
+  renderGoalCard();
   renderMotivation();
   renderMarketCard();
 }
@@ -514,6 +581,44 @@ function renderJourney() {
 function renderMotivation() {
   const card = stablePick(`mot|${today()}`, MOTIVATION_CARDS);
   document.getElementById('motivation-text').textContent = card.text;
+}
+
+function renderGoalCard() {
+  const card = document.getElementById('goal-card');
+  const goal = getActiveGoal();
+
+  if (!goal) {
+    card.className = 'goal-card';
+    card.innerHTML = `
+      <h2 class="goal-card-title">Hedefim</h2>
+      <p class="goal-card-lead">Gramların bir hedefe dönüşsün.</p>
+      <button type="button" class="btn btn-ghost btn-block" id="open-goal-btn">Hedef Belirle</button>`;
+    document.getElementById('open-goal-btn').addEventListener('click', () => openGoalModal(false));
+    return;
+  }
+
+  const { current, target, percent, completed } = getGoalProgress(goal);
+  const asset = ASSET_TYPES[goal.assetType];
+  const statusLine = completed
+    ? '<p class="goal-card-done">Hedef tamamlandı 🎉</p>'
+    : '<p class="goal-card-motivation">Hedefine yaklaşıyorsun.</p>';
+
+  card.className = `goal-card goal-card--${goal.assetType}`;
+  card.innerHTML = `
+    <div class="goal-card-head">
+      <h2 class="goal-card-title">Hedefim</h2>
+      <span class="goal-card-icon" aria-hidden="true">${asset.icon}</span>
+    </div>
+    <p class="goal-card-subtitle">${escapeHtml(goal.title)}</p>
+    <p class="goal-card-progress">${escapeHtml(formatGoalProgressLine(current, target))}</p>
+    <p class="goal-card-percent">%${percent} tamamlandı</p>
+    <div class="goal-progress" aria-hidden="true">
+      <div class="goal-progress-fill" style="width:${percent}%"></div>
+    </div>
+    ${statusLine}
+    <button type="button" class="btn btn-ghost btn-block goal-card-edit" id="open-goal-edit-btn">Düzenle</button>`;
+
+  document.getElementById('open-goal-edit-btn').addEventListener('click', () => openGoalModal(true));
 }
 
 function formatMarketUpdatedAt(iso) {
@@ -993,6 +1098,85 @@ function submitName() {
   renderGreeting();
 }
 
+/* ---------------- Hedef ---------------- */
+let goalFormAsset = 'gold';
+
+function setGoalFormAsset(asset) {
+  goalFormAsset = asset === 'silver' ? 'silver' : 'gold';
+  document.querySelectorAll('#goal-asset-segment .segment-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.asset === goalFormAsset);
+  });
+}
+
+function openGoalModal(isEdit) {
+  editingGoal = isEdit;
+  const goal = getActiveGoal();
+  const overlay = document.getElementById('goal-overlay');
+  const titleEl = document.getElementById('goal-modal-title');
+  const deleteBtn = document.getElementById('goal-delete-btn');
+  const form = document.getElementById('goal-form');
+
+  titleEl.textContent = isEdit ? 'Hedefi Düzenle' : 'Hedef Belirle';
+  deleteBtn.classList.toggle('hidden', !isEdit);
+
+  if (isEdit && goal) {
+    goalFormAsset = goal.assetType;
+    document.getElementById('goal-title').value = goal.title;
+    document.getElementById('goal-target-grams').value = String(goal.targetGrams);
+  } else {
+    goalFormAsset = 'gold';
+    form.reset();
+    document.getElementById('goal-target-grams').value = '';
+  }
+
+  setGoalFormAsset(goalFormAsset);
+  overlay.classList.remove('hidden');
+  setTimeout(() => document.getElementById('goal-title').focus(), 60);
+}
+
+function closeGoalModal() {
+  editingGoal = false;
+  document.getElementById('goal-overlay').classList.add('hidden');
+}
+
+function submitGoalForm() {
+  const title = document.getElementById('goal-title').value.trim();
+  const targetGrams = parseFloat(document.getElementById('goal-target-grams').value);
+
+  if (!title) {
+    showToast('Hedef adı gir.');
+    return;
+  }
+  if (Number.isNaN(targetGrams) || targetGrams <= 0) {
+    showToast('Geçerli bir hedef gramı gir.');
+    return;
+  }
+
+  const existing = getActiveGoal();
+  const wasEditing = editingGoal;
+  const goal = normalizeGoal({
+    id: existing?.id,
+    assetType: goalFormAsset,
+    title,
+    targetGrams,
+    createdAt: existing?.createdAt,
+  });
+
+  data.goals = goal ? [goal] : [];
+  saveData();
+  closeGoalModal();
+  renderGoalCard();
+  showToast(wasEditing ? 'Hedef güncellendi.' : 'Hedefin kaydedildi.');
+}
+
+function deleteGoal() {
+  data.goals = [];
+  saveData();
+  closeGoalModal();
+  renderGoalCard();
+  showToast('Hedef silindi.');
+}
+
 /* ---------------- Toast ---------------- */
 function showToast(msg) {
   const el = document.getElementById('toast');
@@ -1055,6 +1239,22 @@ document.getElementById('history-list').addEventListener('click', (e) => {
 document.getElementById('name-form').addEventListener('submit', (e) => {
   e.preventDefault();
   submitName();
+});
+
+document.getElementById('goal-asset-segment').addEventListener('click', (e) => {
+  const btn = e.target.closest('.segment-btn');
+  if (btn) setGoalFormAsset(btn.dataset.asset);
+});
+
+document.getElementById('goal-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitGoalForm();
+});
+
+document.getElementById('goal-cancel-btn').addEventListener('click', closeGoalModal);
+document.getElementById('goal-delete-btn').addEventListener('click', deleteGoal);
+document.getElementById('goal-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'goal-overlay') closeGoalModal();
 });
 
 document.getElementById('celebrate-close').addEventListener('click', closeCelebration);

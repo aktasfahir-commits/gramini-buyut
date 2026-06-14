@@ -290,6 +290,121 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* Hedef kartı */
+.goal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+.goal-card--gold {
+  border-color: rgba(202, 161, 47, 0.28);
+  background: linear-gradient(180deg, #fffdf8 0%, var(--surface) 100%);
+}
+
+.goal-card--silver {
+  border-color: rgba(140, 155, 170, 0.28);
+  background: linear-gradient(180deg, #f8fafc 0%, var(--surface) 100%);
+}
+
+.goal-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.goal-card-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.goal-card-icon { font-size: 1.1rem; line-height: 1; }
+
+.goal-card-lead,
+.goal-card-subtitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.goal-card-subtitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold-ink);
+}
+
+.goal-card--silver .goal-card-subtitle { color: #4a5d6b; }
+
+.goal-card-progress {
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.goal-card-percent {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+
+.goal-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(202, 161, 47, 0.14);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.goal-card--silver .goal-progress {
+  background: rgba(140, 155, 170, 0.18);
+}
+
+.goal-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--primary-hover));
+  transition: width 0.35s ease;
+}
+
+.goal-card--silver .goal-progress-fill {
+  background: linear-gradient(90deg, #8b9bab, #6f8496);
+}
+
+.goal-card-motivation,
+.goal-card-done {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.goal-card-motivation { color: var(--primary-hover); }
+.goal-card-done { color: var(--gold-ink); }
+
+.goal-card-edit { margin-top: 2px; }
+
+.goal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  text-align: left;
+}
+
+.goal-modal .modal-lead { margin-bottom: 0; }
+
 /* İsim sorma modalı */
 .name-emoji {
   display: block;

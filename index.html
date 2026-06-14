@@ -10,7 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -95,6 +95,8 @@
           <span class="journey-value" id="journey-rhythm">—</span>
         </div>
       </section>
+
+      <section class="goal-card" id="goal-card"></section>
 
       <section class="motivation-card" id="motivation-card">
         <span class="motivation-quote-mark" aria-hidden="true">“</span>
@@ -248,6 +250,37 @@
       </div>
     </div>
 
+    <!-- HEDEF -->
+    <div id="goal-overlay" class="modal-overlay hidden">
+      <div class="modal modal-compact goal-modal">
+        <h3 class="modal-title" id="goal-modal-title">Hedef Belirle</h3>
+        <p class="modal-lead">Fiziksel birikim hedefini gram üzerinden belirle.</p>
+        <form id="goal-form" class="goal-form">
+          <div class="field">
+            <span class="field-label">Varlık</span>
+            <div class="segment" id="goal-asset-segment" role="tablist">
+              <button type="button" class="segment-btn active" data-asset="gold" role="tab">🥇 Altın</button>
+              <button type="button" class="segment-btn" data-asset="silver" role="tab">🥈 Gümüş</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="goal-title">Hedef adı</label>
+            <input type="text" id="goal-title" class="text-input" maxlength="80" placeholder="Örn: İlk 10 gram altın" required>
+          </div>
+          <div class="field">
+            <label class="field-label" for="goal-target-grams">Hedef gram</label>
+            <div class="grams-input-wrap">
+              <input type="number" id="goal-target-grams" class="text-input" min="0.01" step="any" placeholder="10" inputmode="decimal" required>
+              <span class="grams-unit">gr</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Kaydet</button>
+          <button type="button" class="btn btn-danger btn-block hidden" id="goal-delete-btn">Hedefi Sil</button>
+          <button type="button" class="btn btn-ghost btn-block" id="goal-cancel-btn">Vazgeç</button>
+        </form>
+      </div>
+    </div>
+
     <!-- İSİM (ilk açılışta bir kez) -->
     <div id="name-overlay" class="modal-overlay hidden">
       <div class="modal modal-compact">
@@ -264,6 +297,6 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

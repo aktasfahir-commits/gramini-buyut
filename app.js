@@ -554,13 +554,23 @@ function marketAssetBlock(label, metal) {
     </div>`;
 }
 
+function marketSilverBlock(metal) {
+  if (hasMarketMetalPrices(metal)) return marketAssetBlock('Gram Gümüş', metal);
+  return `
+    <div class="market-asset">
+      <p class="market-asset-name">Gram Gümüş</p>
+      <p class="market-unavailable">Gümüş fiyatı alınamadı</p>
+    </div>`;
+}
+
 // Günlük Piyasa: bilgilendirme amaçlı, portföy/kâr-zarar yok.
 function renderMarketCard() {
   const body = document.getElementById('market-card-body');
   const m = marketFeed;
-  const hasData = hasMarketMetalPrices(m.gold) || hasMarketMetalPrices(m.silver);
+  const hasGold = hasMarketMetalPrices(m.gold);
+  const hasSilver = hasMarketMetalPrices(m.silver);
 
-  if (!hasData) {
+  if (!hasGold && !hasSilver) {
     body.innerHTML = '<p class="market-empty">Fiyat bilgisi yakında eklenecek.</p>';
     return;
   }
@@ -571,8 +581,8 @@ function renderMarketCard() {
 
   body.innerHTML = `
     <div class="market-assets">
-      ${marketAssetBlock('Gram Altın', m.gold)}
-      ${marketAssetBlock('Gram Gümüş', m.silver)}
+      ${hasGold ? marketAssetBlock('Gram Altın', m.gold) : ''}
+      ${marketSilverBlock(m.silver)}
     </div>
     ${updatedLine}`;
 }

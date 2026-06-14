@@ -415,6 +415,13 @@ body {
   line-height: 1.45;
 }
 
+.market-unavailable {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
 .market-card-foot {
   margin-top: 10px;
   padding-top: 10px;

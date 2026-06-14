@@ -5,8 +5,7 @@
  * Kaynaklar:
  * - Gram Altın: https://doviz-api.onrender.com/api/altin (birincil)
  * - Gram Altın yedek: https://www.zulfumehmet.com/api/piyasa.json
- * - Gram Gümüş: https://uzmanpara.milliyet.com.tr/gumus-gram-fiyati/ (birincil)
- * - Gram Gümüş yedek: https://doviz-api.onrender.com/api/gumus
+ * - Gram Gümüş: https://uzmanpara.milliyet.com.tr/gumus-gram-fiyati/
  */
 
 const fs = require('fs');
@@ -15,7 +14,6 @@ const path = require('path');
 const GOLD_DOVIZ_URL = 'https://doviz-api.onrender.com/api/altin';
 const GOLD_ZULFU_URL = 'https://www.zulfumehmet.com/api/piyasa.json';
 const SILVER_MILLIYET_URL = 'https://uzmanpara.milliyet.com.tr/gumus-gram-fiyati/';
-const SILVER_DOVIZ_URL = 'https://doviz-api.onrender.com/api/gumus';
 const OUT_PATH = path.join(__dirname, '..', 'data', 'market.json');
 const FETCH_TIMEOUT_MS = 25000;
 
@@ -138,25 +136,6 @@ function parseSilverFromMilliyet(html) {
   };
 }
 
-/** Doviz-API yedek: GumusGramSpot (önbellek eski kalabiliyor). */
-function normalizeSilverGramTRY(n) {
-  if (n == null) return null;
-  if (n > 500) return Math.round((n / 1000) * 100) / 100;
-  return n;
-}
-
-/** Doviz-API: GumusGramSpot = gram gümüş. */
-function parseSilver(payload) {
-  const data = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
-  const item = data?.GumusGramSpot || data?.GumusGram || data?.gumusGram || data?.gumusgram;
-  if (!item || typeof item !== 'object') return { buyTRY: null, sellTRY: null };
-
-  return {
-    buyTRY: normalizeSilverGramTRY(parseTRNumber(readField(item, ['Alis', 'alis', 'buy', 'buying']))),
-    sellTRY: normalizeSilverGramTRY(parseTRNumber(readField(item, ['Satis', 'satis', 'sell', 'selling']))),
-  };
-}
-
 function hasMetalPrices(metal) {
   return (typeof metal?.buyTRY === 'number' && metal.buyTRY > 0)
     || (typeof metal?.sellTRY === 'number' && metal.sellTRY > 0);
@@ -215,19 +194,14 @@ async function main() {
     const milliyetHtml = await fetchText(SILVER_MILLIYET_URL);
     silver = parseSilverFromMilliyet(milliyetHtml);
     if (!hasMetalPrices(silver)) {
-      const silverPayload = await fetchJson(SILVER_DOVIZ_URL);
-      silver = parseSilver(silverPayload);
+      hadError = true;
+      console.error('Gümüş parse edilemedi; fiyat boş bırakıldı.');
+      silver = { buyTRY: null, sellTRY: null };
     }
   } catch (err) {
     hadError = true;
     console.error('Gümüş kaynağı hatası:', err.message);
-    try {
-      const silverPayload = await fetchJson(SILVER_DOVIZ_URL);
-      silver = parseSilver(silverPayload);
-    } catch (fallbackErr) {
-      console.error('Gümüş yedek kaynağı hatası:', fallbackErr.message);
-      if (existing?.silver) silver = existing.silver;
-    }
+    silver = { buyTRY: null, sellTRY: null };
   }
 
   const status = resolveStatus(gold, silver);

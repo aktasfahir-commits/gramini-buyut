@@ -1,15 +1,15 @@
 {
   "gold": {
-    "buyTRY": 6276.26,
-    "sellTRY": 6277.08,
-    "label": "Gram altın piyasa verisi"
+    "buyTRY": 6216.03,
+    "sellTRY": 6280.75,
+    "label": "Dünya Katılım referans kuru"
   },
   "silver": {
     "buyTRY": 100.76,
     "sellTRY": 102.28,
-    "label": "Dünya Katılım gümüş kuru"
+    "label": "Dünya Katılım referans kuru"
   },
-  "updatedAt": "2026-06-14T11:36:13.551Z",
+  "updatedAt": "2026-06-14T11:45:04.468Z",
   "source": "auto",
   "status": "ok"
 }

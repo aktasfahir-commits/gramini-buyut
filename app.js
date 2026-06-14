@@ -73,6 +73,7 @@ const LEGACY_ITEM_REMAP = {
 /* ---------------- Motivasyon kartları ---------------- */
 // V1: statik havuz. İleride 200-300 karta ve fiyat temelli kartlara büyüyecek.
 // type alanı şimdiden ileri uyumluluk için: 'genel' | 'gunluk-ornek' | 'fiyat-dusus' | 'fiyat-artis'
+// TODO: İleride motivasyon kartı önizleme/test modu eklenebilir.
 const MOTIVATION_CARDS = [
   { id: 'm1', type: 'gunluk-ornek', text: 'Kahvene para harca. Ama unutma, gram altın daha lezzetli.' },
   { id: 'm2', type: 'genel', text: 'Hayatı erteleme. Geleceğini de erteleme.' },
@@ -592,17 +593,15 @@ function renderMotivation() {
 
 function renderGoalItemHtml(goal) {
   const { current, target, percent, completed } = getGoalProgress(goal);
-  const asset = ASSET_TYPES[goal.assetType];
+  const heading = goal.assetType === 'silver' ? '🥈 Gümüş hedefim' : '🥇 Altın hedefim';
   const statusLine = completed
     ? '<p class="goal-item-done">Hedef tamamlandı 🎉</p>'
     : '<p class="goal-item-motivation">Hedefine yaklaşıyorsun.</p>';
 
   return `
     <article class="goal-item goal-item--${goal.assetType}">
-      <div class="goal-item-head">
-        <span class="goal-item-icon" aria-hidden="true">${asset.icon}</span>
-        <p class="goal-item-subtitle">${escapeHtml(goal.title)}</p>
-      </div>
+      <p class="goal-item-heading">${heading}</p>
+      <p class="goal-item-subtitle">${escapeHtml(goal.title)}</p>
       <p class="goal-item-progress">${escapeHtml(formatGoalProgressLine(current, target))}</p>
       <p class="goal-item-percent">%${percent} tamamlandı</p>
       <div class="goal-progress" aria-hidden="true">

@@ -405,6 +405,14 @@ body {
   margin: 14px 0;
 }
 
+.goal-item-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+
 .goal-item-head {
   display: flex;
   align-items: center;
@@ -418,8 +426,7 @@ body {
   font-size: 1rem;
   font-weight: 700;
   line-height: 1.4;
-  margin: 0;
-  flex: 1;
+  margin: 0 0 8px;
 }
 
 .goal-item--gold .goal-item-subtitle { color: var(--gold-ink); }

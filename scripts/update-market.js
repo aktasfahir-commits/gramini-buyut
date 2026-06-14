@@ -1,17 +1,19 @@
-/*
+/**
  * Günlük Piyasa verisi üretici.
  * GitHub Actions veya yerelde: node scripts/update-market.js
  *
  * Kaynaklar:
- * - Gram Altın: https://www.zulfumehmet.com/api/piyasa.json
- * - Gram Gümüş: https://doviz-api.onrender.com/api/gumus
+ * - Gram Altın: https://doviz-api.onrender.com/api/altin (birincil)
+ * - Gram Altın yedek: https://www.zulfumehmet.com/api/piyasa.json
+ * - Gram Gümüş: https://uzmanpara.milliyet.com.tr/gumus-gram-fiyati/ (tek kaynak)
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const GOLD_URL = 'https://www.zulfumehmet.com/api/piyasa.json';
-const SILVER_URL = 'https://doviz-api.onrender.com/api/gumus';
+const GOLD_DOVIZ_URL = 'https://doviz-api.onrender.com/api/altin';
+const GOLD_ZULFU_URL = 'https://www.zulfumehmet.com/api/piyasa.json';
+const SILVER_UZMANPARA_URL = 'https://uzmanpara.milliyet.com.tr/gumus-gram-fiyati/';
 const OUT_PATH = path.join(__dirname, '..', 'data', 'market.json');
 const FETCH_TIMEOUT_MS = 25000;
 
@@ -23,7 +25,7 @@ const EMPTY_MARKET = {
   status: 'empty',
 };
 
-/** TR sayı formatını (6.307,25 / 134.752,00 / 6307.25) güvenli number'a çevirir. */
+/** TR sayı formatını (6.307,25 / 101,07 / 6307.25) güvenli number'a çevirir. */
 function parseTRNumber(raw) {
   if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return Math.round(raw * 100) / 100;
   if (typeof raw !== 'string') return null;
@@ -31,12 +33,16 @@ function parseTRNumber(raw) {
   let s = raw.trim().replace(/\s/g, '');
   if (!s) return null;
 
-  // Para birimi / yüzde gibi ekleri temizle
   s = s.replace(/[^\d.,-]/g, '');
   if (!s) return null;
 
-  // Türkçe: binlik nokta + ondalık virgül (ör. 6.307,25 veya 134,75)
   if (s.includes(',')) {
+    const head = s.split(',')[0];
+    if (/^\d{1,2}\.\d{3}$/.test(head)) {
+      const normalized = s.replace(/\./g, '').replace(',', '.');
+      const n = Number.parseFloat(normalized);
+      return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
+    }
     const normalized = s.replace(/\./g, '').replace(',', '.');
     const n = Number.parseFloat(normalized);
     return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
@@ -69,6 +75,32 @@ async function fetchJson(url) {
   }
 }
 
+async function fetchText(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Doviz-API: Altin = gram altın (serbest piyasa). */
+function parseGoldFromDoviz(payload) {
+  const item = payload?.data?.Altin;
+  if (!item || typeof item !== 'object') return { buyTRY: null, sellTRY: null };
+
+  return {
+    buyTRY: parseTRNumber(readField(item, ['Alis', 'alis', 'buy', 'buying'])),
+    sellTRY: parseTRNumber(readField(item, ['Satis', 'satis', 'sell', 'selling'])),
+  };
+}
+
 /** Zülfü Mehmet: ikinci dizi altın ürünleri; giramaltin = gram altın. */
 function parseGold(payload) {
   const rows = Array.isArray(payload?.[1]) ? payload[1] : Array.isArray(payload) ? payload : [];
@@ -87,22 +119,18 @@ function parseGold(payload) {
   };
 }
 
-/** Gram gümüş için makul TRY aralığı; Doviz-API bazen 1000× büyük TR formatı döner. */
-function normalizeSilverGramTRY(n) {
-  if (n == null) return null;
-  if (n > 500) return Math.round((n / 1000) * 100) / 100;
-  return n;
-}
+/** Uzmanpara HTML: Gümüş Gram (TL) tablo satırı. */
+function parseUzmanparaSilver(html) {
+  if (typeof html !== 'string') return { buyTRY: null, sellTRY: null };
 
-/** Doviz-API: GumusGramSpot = gram gümüş (öncelikli). */
-function parseSilver(payload) {
-  const data = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
-  const item = data?.GumusGramSpot || data?.GumusGram || data?.gumusGram || data?.gumusgram;
-  if (!item || typeof item !== 'object') return { buyTRY: null, sellTRY: null };
+  const row = html.match(
+    /G[uü]m[uü][şs]\s*Gram\s*\(TL\)<\/td>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*>([^<]+)<\/td>/i,
+  );
+  if (!row) return { buyTRY: null, sellTRY: null };
 
   return {
-    buyTRY: normalizeSilverGramTRY(parseTRNumber(readField(item, ['Alis', 'alis', 'buy', 'buying']))),
-    sellTRY: normalizeSilverGramTRY(parseTRNumber(readField(item, ['Satis', 'satis', 'sell', 'selling']))),
+    buyTRY: parseTRNumber(row[1]),
+    sellTRY: parseTRNumber(row[2]),
   };
 }
 
@@ -142,21 +170,36 @@ async function main() {
   let hadError = false;
 
   try {
-    const goldPayload = await fetchJson(GOLD_URL);
-    gold = parseGold(goldPayload);
+    const goldPayload = await fetchJson(GOLD_DOVIZ_URL);
+    gold = parseGoldFromDoviz(goldPayload);
+    if (!hasMetalPrices(gold)) {
+      const fallbackPayload = await fetchJson(GOLD_ZULFU_URL);
+      gold = parseGold(fallbackPayload);
+    }
   } catch (err) {
     hadError = true;
     console.error('Altın kaynağı hatası:', err.message);
-    if (existing?.gold) gold = existing.gold;
+    try {
+      const fallbackPayload = await fetchJson(GOLD_ZULFU_URL);
+      gold = parseGold(fallbackPayload);
+    } catch (fallbackErr) {
+      console.error('Altın yedek kaynağı hatası:', fallbackErr.message);
+      if (existing?.gold) gold = existing.gold;
+    }
   }
 
   try {
-    const silverPayload = await fetchJson(SILVER_URL);
-    silver = parseSilver(silverPayload);
+    const html = await fetchText(SILVER_UZMANPARA_URL);
+    silver = parseUzmanparaSilver(html);
+    if (!hasMetalPrices(silver)) {
+      hadError = true;
+      console.error('Gümüş parse edilemedi; fiyat boş bırakıldı.');
+      silver = { buyTRY: null, sellTRY: null };
+    }
   } catch (err) {
     hadError = true;
     console.error('Gümüş kaynağı hatası:', err.message);
-    if (existing?.silver) silver = existing.silver;
+    silver = { buyTRY: null, sellTRY: null };
   }
 
   const status = resolveStatus(gold, silver);
@@ -168,8 +211,7 @@ async function main() {
     status,
   };
 
-  // Tamamen boş ve eski veri varsa eski dosyayı koru
-  if (status === 'empty' && existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
+  if (status === 'empty' && existing && hasMetalPrices(existing.gold)) {
     console.log('Yeni veri alınamadı; mevcut market.json korundu.');
     process.exit(hadError ? 1 : 0);
   }

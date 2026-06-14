@@ -345,6 +345,16 @@ function formatTRY(n) {
   });
 }
 
+/** Günlük Piyasa kartı: alış/satış kuruş dahil gösterilir. */
+function formatMarketTRY(n) {
+  return (Number(n) || 0).toLocaleString('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function hasAnyPrice() {
   return Object.values(PURITY_PRICE_KEY)
     .concat('silverPricePerGramTRY')
@@ -543,7 +553,7 @@ function hasMarketMetalPrices(metal) {
 
 function marketPriceText(value) {
   const n = normalizeMarketPrice(value);
-  return n != null ? formatTRY(n) : '—';
+  return n != null ? formatMarketTRY(n) : '—';
 }
 
 function marketAssetBlock(label, metal) {

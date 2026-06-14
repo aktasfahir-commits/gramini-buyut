@@ -373,11 +373,13 @@ body {
 }
 
 .market-asset-source {
-  margin: 0 0 6px;
-  font-size: 0.76rem;
-  font-weight: 500;
+  display: block;
+  margin: -2px 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--text-muted);
-  line-height: 1.35;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
 }
 
 .market-price-line {

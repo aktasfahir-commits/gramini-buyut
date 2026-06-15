@@ -43,7 +43,20 @@ body {
 /* Header */
 .header { margin-bottom: 20px; }
 
-.brand { display: flex; align-items: center; gap: 12px; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.brand:hover { opacity: 0.88; }
+
+.brand:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
 
 .brand-logo {
   width: 46px; height: 46px;

@@ -1695,7 +1695,15 @@ function showToast(msg) {
 }
 
 /* ---------------- Olaylar ---------------- */
-document.getElementById('brand-home-btn').addEventListener('click', () => switchView('home'));
+const brandHomeBtn = document.getElementById('brand-home-btn');
+brandHomeBtn.addEventListener('click', () => switchView('home'));
+brandHomeBtn.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    switchView('home');
+  }
+});
+
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
 document.getElementById('open-initial-start-btn').addEventListener('click', () => openInitialModal());

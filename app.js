@@ -1695,6 +1695,7 @@ function showToast(msg) {
 }
 
 /* ---------------- Olaylar ---------------- */
+document.getElementById('brand-home-btn').addEventListener('click', () => switchView('home'));
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
 document.getElementById('open-initial-start-btn').addEventListener('click', () => openInitialModal());

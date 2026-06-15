@@ -2,7 +2,12 @@
    Felsefe: Fiyatlar değişir. Gramlar kalır. */
 
 const STORAGE_KEY = 'gramini-buyut';
-const DATA_VERSION = 3;
+const DATA_VERSION = 4;
+
+/* ---------------- Kilometre taşları ---------------- */
+const GOLD_GRAM_MILESTONES = [1, 5, 10, 25, 50, 100, 250, 500, 1000];
+const SILVER_GRAM_MILESTONES = [100, 250, 500, 1000, 5000, 10000];
+const GOAL_PERCENT_MILESTONES = [25, 50, 75, 100];
 
 /* ---------------- Varlık türleri ---------------- */
 // fixed: true → birim gram sabittir, gram = unitGrams × quantity (otomatik).
@@ -124,7 +129,12 @@ function emptyData() {
     goals: [],
     settings: { showEstimatedValue: false, name: null, nameAsked: false },
     priceState: { ...DEFAULT_PRICE_STATE },
+    achievements: emptyAchievements(),
   };
+}
+
+function emptyAchievements() {
+  return { unlocked: [], unlockedAt: {} };
 }
 
 let data = emptyData();
@@ -231,45 +241,185 @@ function loadData() {
     const priceState = normalizePriceState(parsed.priceState);
 
     if (parsed.version === DATA_VERSION) {
-      data = {
-        version: DATA_VERSION,
-        records: parsed.records.map(normalizeRecord).filter(isValidRecord),
-        goals: normalizeGoals(parsed.goals),
-        settings,
-        priceState,
-      };
+      data = buildLoadedData(parsed.records, parsed.goals, settings, priceState, parsed.achievements, false);
+      return;
+    }
+
+    if (parsed.version === 3) {
+      data = buildLoadedData(parsed.records, parsed.goals, settings, priceState, parsed.achievements, true);
+      saveData();
       return;
     }
 
     if (parsed.version === 2) {
-      data = {
-        version: DATA_VERSION,
-        records: parsed.records.map(normalizeRecord).filter(isValidRecord),
-        goals: normalizeGoals(parsed.goals),
-        settings,
-        priceState,
-      };
+      data = buildLoadedData(parsed.records, parsed.goals, settings, priceState, null, true);
       saveData();
       return;
     }
 
     if (parsed.version === 1) {
-      data = {
-        version: DATA_VERSION,
-        records: parsed.records.map(migrateRecordV1toV2).filter(isValidRecord),
-        goals: normalizeGoals(parsed.goals),
-        settings,
-        priceState,
-      };
+      const records = parsed.records.map(migrateRecordV1toV2);
+      data = buildLoadedData(records, parsed.goals, settings, priceState, null, true);
       saveData();
       return;
     }
 
-    // Bilinmeyen/eski şema: tam v2 şemasıyla güvenli sıfırlama.
+    // Bilinmeyen/eski şema: güvenli sıfırlama.
     data = emptyData();
   } catch {
     data = emptyData();
   }
+}
+
+function buildLoadedData(records, goals, settings, priceState, achievementsRaw, backfill) {
+  const recordsNorm = (Array.isArray(records) ? records : []).map(normalizeRecord).filter(isValidRecord);
+  const goalsNorm = normalizeGoals(goals);
+  return {
+    version: DATA_VERSION,
+    records: recordsNorm,
+    goals: goalsNorm,
+    settings,
+    priceState,
+    achievements: normalizeAchievements(achievementsRaw, recordsNorm, goalsNorm, backfill),
+  };
+}
+
+function normalizeAchievements(raw, records, goals, backfill) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const unlocked = Array.isArray(src.unlocked)
+    ? src.unlocked.filter((id) => typeof id === 'string' && id)
+    : [];
+  const unlockedAt = src.unlockedAt && typeof src.unlockedAt === 'object' ? { ...src.unlockedAt } : {};
+  const achievements = { unlocked, unlockedAt };
+
+  if (backfill) {
+    backfillAchievements(achievements, records, goals);
+  }
+
+  return achievements;
+}
+
+function isAchievementUnlocked(id) {
+  return data.achievements.unlocked.includes(id);
+}
+
+function unlockAchievement(id) {
+  if (isAchievementUnlocked(id)) return false;
+  data.achievements.unlocked.push(id);
+  data.achievements.unlockedAt[id] = new Date().toISOString();
+  return true;
+}
+
+function gramMilestoneId(assetType, threshold) {
+  return `${assetType}-${threshold}`;
+}
+
+function goalMilestoneId(assetType, percent) {
+  return `goal-${assetType}-${percent}`;
+}
+
+function totalGramsFromRecords(records, assetType) {
+  return records
+    .filter((r) => r.assetType === assetType)
+    .reduce((sum, r) => sum + (Number(r.grams) || 0), 0);
+}
+
+function goalPercentAt(current, target) {
+  if (!(target > 0)) return 0;
+  return Math.min(100, Math.floor((current / target) * 100));
+}
+
+function collectPassedGramMilestones(goldTotal, silverTotal) {
+  const passed = [];
+  GOLD_GRAM_MILESTONES.forEach((threshold) => {
+    if (goldTotal >= threshold) passed.push(gramMilestoneId('gold', threshold));
+  });
+  SILVER_GRAM_MILESTONES.forEach((threshold) => {
+    if (silverTotal >= threshold) passed.push(gramMilestoneId('silver', threshold));
+  });
+  return passed;
+}
+
+function collectPassedGoalMilestones(goals, goldTotal, silverTotal) {
+  const passed = [];
+  (Array.isArray(goals) ? goals : []).forEach((goal) => {
+    const current = goal.assetType === 'gold' ? goldTotal : silverTotal;
+    const percent = goalPercentAt(current, goal.targetGrams);
+    GOAL_PERCENT_MILESTONES.forEach((milestone) => {
+      if (percent >= milestone) passed.push(goalMilestoneId(goal.assetType, milestone));
+    });
+  });
+  return passed;
+}
+
+function backfillAchievements(achievements, records, goals) {
+  const goldTotal = totalGramsFromRecords(records, 'gold');
+  const silverTotal = totalGramsFromRecords(records, 'silver');
+  const allPassed = [
+    ...collectPassedGramMilestones(goldTotal, silverTotal),
+    ...collectPassedGoalMilestones(goals, goldTotal, silverTotal),
+  ];
+  allPassed.forEach((id) => {
+    if (!achievements.unlocked.includes(id)) {
+      achievements.unlocked.push(id);
+      if (!achievements.unlockedAt[id]) achievements.unlockedAt[id] = null;
+    }
+  });
+}
+
+function checkNewMilestones(prevGold, prevSilver, prevGoalPercents) {
+  const newlyUnlocked = [];
+  const goldTotal = totalGrams('gold');
+  const silverTotal = totalGrams('silver');
+
+  GOLD_GRAM_MILESTONES.forEach((threshold) => {
+    const id = gramMilestoneId('gold', threshold);
+    if (!isAchievementUnlocked(id) && prevGold < threshold && goldTotal >= threshold) {
+      unlockAchievement(id);
+      newlyUnlocked.push({ id, kind: 'gold', threshold });
+    }
+  });
+
+  SILVER_GRAM_MILESTONES.forEach((threshold) => {
+    const id = gramMilestoneId('silver', threshold);
+    if (!isAchievementUnlocked(id) && prevSilver < threshold && silverTotal >= threshold) {
+      unlockAchievement(id);
+      newlyUnlocked.push({ id, kind: 'silver', threshold });
+    }
+  });
+
+  data.goals.forEach((goal) => {
+    const current = totalGrams(goal.assetType);
+    const prevPercent = prevGoalPercents[goal.assetType] ?? 0;
+    const currentPercent = goalPercentAt(current, goal.targetGrams);
+    GOAL_PERCENT_MILESTONES.forEach((milestone) => {
+      const id = goalMilestoneId(goal.assetType, milestone);
+      if (!isAchievementUnlocked(id) && prevPercent < milestone && currentPercent >= milestone) {
+        unlockAchievement(id);
+        newlyUnlocked.push({ id, kind: 'goal', assetType: goal.assetType, percent: milestone });
+      }
+    });
+  });
+
+  return newlyUnlocked;
+}
+
+function milestoneMessage(milestone) {
+  if (milestone.kind === 'gold') {
+    if (milestone.threshold === 1) return 'İlk gram altına ulaştın!';
+    return `${formatGrams(milestone.threshold)} altına ulaştın!`;
+  }
+  if (milestone.kind === 'silver') {
+    return `${formatGrams(milestone.threshold)} gümüşe ulaştın!`;
+  }
+  const assetLabel = milestone.assetType === 'gold' ? 'Altın' : 'Gümüş';
+  if (milestone.percent === 100) return `${assetLabel} hedefini tamamladın!`;
+  return `${assetLabel} hedefinin %${milestone.percent}'ine ulaştın!`;
+}
+
+function milestoneEmoji(milestone) {
+  if (milestone.kind === 'goal') return milestone.percent === 100 ? '🎯' : '📈';
+  return milestone.kind === 'gold' ? '🥇' : '🥈';
 }
 
 function normalizeSettings(s) {
@@ -1059,6 +1209,13 @@ function submitRecordForm() {
     return;
   }
 
+  const prevGold = totalGrams('gold');
+  const prevSilver = totalGrams('silver');
+  const prevGoalPercents = {};
+  data.goals.forEach((goal) => {
+    prevGoalPercents[goal.assetType] = goalPercentAt(totalGrams(goal.assetType), goal.targetGrams);
+  });
+
   const record = {
     id: generateId(),
     assetType: formAsset,
@@ -1071,12 +1228,13 @@ function submitRecordForm() {
     createdAt: new Date().toISOString(),
   };
   data.records.push(record);
+  const newMilestones = checkNewMilestones(prevGold, prevSilver, prevGoalPercents);
   saveData();
-  showCelebration(record);
+  showCelebration(record, newMilestones);
 }
 
 /* ---------------- Kutlama ---------------- */
-function showCelebration(record) {
+function showCelebration(record, newMilestones = []) {
   const goldTotal = totalGrams('gold');
   const silverTotal = totalGrams('silver');
   const addedGold = record.assetType === 'gold';
@@ -1100,6 +1258,13 @@ function showCelebration(record) {
     <span class="stat-emoji" aria-hidden="true">🥈</span>
     <span>Gümüş varlığın <strong>${escapeHtml(formatGrams(silverTotal))}</strong>'a ulaştı.</span>
   </li>`);
+
+  newMilestones.forEach((milestone) => {
+    stats.push(`<li class="celebrate-stat milestone">
+      <span class="stat-emoji" aria-hidden="true">${milestoneEmoji(milestone)}</span>
+      <span><strong>${escapeHtml(milestoneMessage(milestone))}</strong></span>
+    </li>`);
+  });
 
   document.getElementById('celebrate-stats').innerHTML = stats.join('');
   document.getElementById('celebrate-overlay').classList.remove('hidden');

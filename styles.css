@@ -712,6 +712,14 @@ body {
 
 .home-actions { display: flex; flex-direction: column; gap: 10px; }
 
+.home-actions--primary {
+  margin-bottom: 14px;
+}
+
+.home-actions--primary .btn {
+  min-height: 48px;
+}
+
 .btn-back {
   display: inline-flex;
   align-items: center;

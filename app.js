@@ -131,7 +131,7 @@ function emptyData() {
     version: DATA_VERSION,
     records: [],
     goals: [],
-    settings: { showEstimatedValue: false, name: null, nameAsked: false },
+    settings: { showEstimatedValue: false, name: null, nameAsked: false, initialHoldingsPromptDismissed: false },
     priceState: { ...DEFAULT_PRICE_STATE },
     achievements: emptyAchievements(),
   };
@@ -314,7 +314,7 @@ function buildLoadedData(records, goals, settings, priceState, achievementsRaw) 
     version: DATA_VERSION,
     records: recordsNorm,
     goals: goalsNorm,
-    settings,
+    settings: finalizeSettings(settings, recordsNorm),
     priceState,
     achievements,
   };
@@ -471,7 +471,36 @@ function normalizeSettings(s) {
     showEstimatedValue: src.showEstimatedValue === true,
     name,
     nameAsked: src.nameAsked === true,
+    initialHoldingsPromptDismissed: src.initialHoldingsPromptDismissed === true,
   };
+}
+
+function finalizeSettings(settings, records) {
+  const normalized = normalizeSettings(settings);
+  if (normalized.initialHoldingsPromptDismissed) return normalized;
+  if (Array.isArray(records) && records.length > 0) {
+    return { ...normalized, initialHoldingsPromptDismissed: true };
+  }
+  return normalized;
+}
+
+function shouldShowInitialHoldingsPrompt() {
+  if (data.settings.initialHoldingsPromptDismissed) return false;
+  if (data.records.some(isEntryRecord)) return false;
+  if (data.records.some(isInitialRecord)) return false;
+  return true;
+}
+
+function dismissInitialHoldingsPrompt() {
+  if (data.settings.initialHoldingsPromptDismissed) return;
+  data.settings.initialHoldingsPromptDismissed = true;
+  saveData();
+}
+
+function renderInitialHoldingsPrompt() {
+  const btn = document.getElementById('open-initial-start-btn');
+  if (!btn) return;
+  btn.classList.toggle('hidden', !shouldShowInitialHoldingsPrompt());
 }
 
 function normalizePriceState(p) {
@@ -811,6 +840,7 @@ function renderJourney() {
   if (!first) {
     journeyCard.classList.add('hidden');
     startCard.classList.remove('hidden');
+    renderInitialHoldingsPrompt();
     return;
   }
   // İlk kayıttan sonra başlangıç kartı tamamen kaybolur.
@@ -1339,6 +1369,7 @@ function submitRecordForm() {
   };
   data.records.push(record);
   const newMilestones = checkNewMilestones(record, prevGold, prevSilver, prevGoalPercents);
+  dismissInitialHoldingsPrompt();
   saveData();
   showCelebration(record, newMilestones);
 }
@@ -1480,6 +1511,7 @@ function submitInitialForm() {
   };
   data.records.push(record);
   silentMilestoneSync();
+  dismissInitialHoldingsPrompt();
   closeInitialModal();
   switchView('home');
   showToast('Başlangıç birikimi eklendi.');
@@ -1654,8 +1686,6 @@ function showToast(msg) {
 /* ---------------- Olaylar ---------------- */
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
-document.getElementById('open-initial-home-btn').addEventListener('click', () => openInitialModal());
-document.getElementById('open-initial-history-btn').addEventListener('click', () => openInitialModal());
 document.getElementById('open-initial-start-btn').addEventListener('click', () => openInitialModal());
 document.getElementById('add-back-btn').addEventListener('click', () => switchView('home'));
 document.getElementById('history-back-btn').addEventListener('click', () => switchView('home'));

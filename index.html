@@ -10,7 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=21">
+  <link rel="stylesheet" href="styles.css?v=22">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -52,6 +52,11 @@
         </article>
       </section>
 
+      <div class="home-actions home-actions--primary">
+        <button type="button" class="btn btn-primary btn-block" id="open-add-btn">+ Gram Ekle</button>
+        <button type="button" class="btn btn-ghost btn-block" id="open-history-btn">📊 Toplam Birikimim</button>
+      </div>
+
       <section class="purity-strip" id="gold-purity-strip">
         <span class="purity-strip-label">🥇 Altın ayar kırılımı</span>
         <div class="purity-breakdown" id="gold-purity-breakdown"></div>
@@ -79,7 +84,7 @@
         <p class="start-card-text">Büyük birikimler küçük başlangıçlarla oluşur.</p>
         <p class="start-card-accent">Bir gram yeter. Başlamak için. 🌱</p>
         <p class="start-card-foot">Dokunuyorsan senindir.</p>
-        <button type="button" class="text-link-btn start-card-initial-link" id="open-initial-start-btn">Zaten birikimin var mı? Başlangıç birikimini ekle</button>
+        <button type="button" class="text-link-btn start-card-initial-link hidden" id="open-initial-start-btn">Zaten birikimin var mı? Başlangıç birikimini ekle</button>
       </section>
 
       <section class="journey-card" id="journey-card">
@@ -109,14 +114,6 @@
         <div class="market-card-body" id="market-card-body"></div>
         <p class="market-card-foot">Fiyatlar değişir. Gramlar kalır.</p>
       </section>
-
-      <div class="home-actions">
-        <button type="button" class="btn btn-primary btn-block" id="open-add-btn">+ Gram Ekle</button>
-        <button type="button" class="btn btn-ghost btn-block" id="open-history-btn">📊 Toplam Birikimim</button>
-        <p class="initial-entry-link-wrap">
-          <button type="button" class="text-link-btn" id="open-initial-home-btn">Başlangıç birikimini ekle</button>
-        </p>
-      </div>
 
       <footer class="footer">
         <p class="footer-tagline">Fiyatlar değişir. Gramlar kalır.</p>
@@ -222,9 +219,6 @@
         </div>
 
         <!-- Kayıt listesi -->
-        <p class="initial-entry-link-wrap initial-entry-link-wrap--history">
-          <button type="button" class="text-link-btn" id="open-initial-history-btn">Başlangıç birikimini ekle</button>
-        </p>
         <h3 class="savings-list-title">Kayıtlar</h3>
         <div id="history-list"></div>
         <p id="history-empty" class="empty-text hidden">Henüz gram eklemedin. İlk gramını eklemeye ne dersin?</p>
@@ -334,6 +328,6 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>

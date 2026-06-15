@@ -10,7 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=24">
+  <link rel="stylesheet" href="styles.css?v=25">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -219,9 +219,22 @@
         </div>
 
         <!-- Kayıt listesi -->
-        <h3 class="savings-list-title">Kayıtlar</h3>
-        <div id="history-list"></div>
-        <p id="history-empty" class="empty-text hidden">Henüz gram eklemedin. İlk gramını eklemeye ne dersin?</p>
+        <div class="savings-list-section">
+          <div class="savings-list-header">
+            <h3 class="savings-list-title">Kayıtlar</h3>
+            <button
+              type="button"
+              class="savings-list-toggle"
+              id="history-records-toggle"
+              aria-expanded="false"
+              aria-controls="history-records-panel"
+            >Kayıtları Göster</button>
+          </div>
+          <div id="history-records-panel" class="history-records-panel hidden">
+            <div id="history-list"></div>
+            <p id="history-empty" class="empty-text hidden">Henüz gram eklemedin. İlk gramını eklemeye ne dersin?</p>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -328,6 +341,6 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>

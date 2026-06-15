@@ -163,6 +163,7 @@ let editingGoal = false;
 let initialFormAsset = 'gold';
 let initialFormPurity = '24';
 let editInitialId = null;
+let historyRecordsExpanded = false;
 
 /* ---------------- Tarih yardımcıları ---------------- */
 function today() {
@@ -1090,12 +1091,17 @@ function renderEstimatePanel() {
 }
 
 /* ---------------- Kayıt listesi render ---------------- */
-function renderHistory() {
-  renderSavingsSummary();
-  renderEstimateOption();
-
+function renderHistoryRecordsPanel() {
+  const panel = document.getElementById('history-records-panel');
+  const toggle = document.getElementById('history-records-toggle');
   const list = document.getElementById('history-list');
   const empty = document.getElementById('history-empty');
+
+  toggle.setAttribute('aria-expanded', String(historyRecordsExpanded));
+  toggle.textContent = historyRecordsExpanded ? 'Kayıtları Gizle' : 'Kayıtları Göster';
+  panel.classList.toggle('hidden', !historyRecordsExpanded);
+
+  if (!historyRecordsExpanded) return;
 
   if (!data.records.length) {
     list.innerHTML = '';
@@ -1123,6 +1129,17 @@ function renderHistory() {
       ${items}
     </div>`;
   }).join('');
+}
+
+function toggleHistoryRecords() {
+  historyRecordsExpanded = !historyRecordsExpanded;
+  renderHistoryRecordsPanel();
+}
+
+function renderHistory() {
+  renderSavingsSummary();
+  renderEstimateOption();
+  renderHistoryRecordsPanel();
 }
 
 function buildHistoryMetaParts(r) {
@@ -1186,7 +1203,10 @@ function switchView(view) {
   document.getElementById('add-view').classList.toggle('hidden', view !== 'add');
   document.getElementById('history-view').classList.toggle('hidden', view !== 'history');
   if (view === 'home') renderHome();
-  else if (view === 'history') renderHistory();
+  else if (view === 'history') {
+    historyRecordsExpanded = false;
+    renderHistory();
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1704,6 +1724,7 @@ brandHomeBtn.addEventListener('keydown', (e) => {
   }
 });
 
+document.getElementById('history-records-toggle').addEventListener('click', toggleHistoryRecords);
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
 document.getElementById('open-initial-start-btn').addEventListener('click', () => openInitialModal());

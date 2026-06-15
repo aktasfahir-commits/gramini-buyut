@@ -290,6 +290,46 @@ body {
   letter-spacing: 0.01em;
 }
 
+.start-card-initial-link {
+  margin-top: 14px;
+}
+
+.text-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.text-link-btn:hover {
+  color: var(--primary);
+}
+
+.initial-entry-link-wrap {
+  text-align: center;
+  margin: 4px 0 0;
+}
+
+.initial-entry-link-wrap--history {
+  margin: 0 0 14px;
+}
+
+.initial-modal .initial-form {
+  text-align: left;
+  margin-top: 16px;
+}
+
+.history-item--initial .history-item-sub--initial {
+  color: var(--primary-hover);
+  font-weight: 600;
+}
+
 /* Hedef kartı */
 .goal-card {
   background: var(--surface);

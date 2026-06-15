@@ -2,7 +2,11 @@
    Felsefe: Fiyatlar değişir. Gramlar kalır. */
 
 const STORAGE_KEY = 'gramini-buyut';
-const DATA_VERSION = 4;
+const DATA_VERSION = 5;
+
+const RECORD_TYPE_ENTRY = 'entry';
+const RECORD_TYPE_INITIAL = 'initial';
+const INITIAL_ITEM_TYPE = 'initial';
 
 /* ---------------- Kilometre taşları ---------------- */
 const GOLD_GRAM_MILESTONES = [1, 5, 10, 25, 50, 100, 250, 500, 1000];
@@ -155,6 +159,9 @@ let formPurity = '24';           // altın seçiliyken aktif ayar sınıfı
 let editRecordId = null;         // düzenleme modundaysak kayıt id'si
 let deleteRecordId = null;
 let editingGoal = false;
+let initialFormAsset = 'gold';
+let initialFormPurity = '24';
+let editInitialId = null;
 
 /* ---------------- Tarih yardımcıları ---------------- */
 function today() {
@@ -231,7 +238,16 @@ function getItemDef(assetType, itemType, goldPurity) {
 }
 
 function itemLabel(assetType, itemType, goldPurity) {
+  if (itemType === INITIAL_ITEM_TYPE) return 'Başlangıç Birikimi';
   return getItemDef(assetType, itemType, goldPurity)?.label || itemType;
+}
+
+function isInitialRecord(r) {
+  return r && r.recordType === RECORD_TYPE_INITIAL;
+}
+
+function isEntryRecord(r) {
+  return r && r.recordType !== RECORD_TYPE_INITIAL;
 }
 
 function purityLabel(purity) {
@@ -254,6 +270,12 @@ function loadData() {
 
     if (parsed.version === DATA_VERSION) {
       data = buildLoadedData(parsed.records, parsed.goals, settings, priceState, parsed.achievements);
+      return;
+    }
+
+    if (parsed.version === 4) {
+      data = buildLoadedData(parsed.records, parsed.goals, settings, priceState, parsed.achievements);
+      saveData();
       return;
     }
 
@@ -430,6 +452,12 @@ function milestoneMessage(milestone) {
   return `${assetLabel} hedefinin %${milestone.percent}'ine ulaştın!`;
 }
 
+function silentMilestoneSync() {
+  ensureAchievements();
+  backfillAchievements(data.achievements, data.records, data.goals);
+  saveData();
+}
+
 function milestoneEmoji(milestone) {
   if (milestone.kind === 'goal') return milestone.percent === 100 ? '🎯' : '📈';
   return milestone.kind === 'gold' ? '🥇' : '🥈';
@@ -470,20 +498,51 @@ function migrateRecordV1toV2(r) {
 // v2 kayıtlarını güvenli hale getir (eksik goldPurity'i tamamla).
 function normalizeRecord(r) {
   if (!r || typeof r !== 'object') return r;
-  if (r.assetType === 'gold' && !GOLD_PURITY_ORDER.includes(r.goldPurity)) {
-    return { ...r, goldPurity: LEGACY_GOLD_PURITY[r.itemType] || '22' };
+
+  const recordType = r.recordType === RECORD_TYPE_INITIAL ? RECORD_TYPE_INITIAL : RECORD_TYPE_ENTRY;
+
+  if (recordType === RECORD_TYPE_INITIAL) {
+    const assetType = r.assetType === 'silver' ? 'silver' : 'gold';
+    const grams = Math.round((Number(r.grams) || 0) * 100) / 100;
+    const goldPurity = assetType === 'gold'
+      ? (GOLD_PURITY_ORDER.includes(r.goldPurity) ? r.goldPurity : '24')
+      : null;
+    return {
+      ...r,
+      recordType: RECORD_TYPE_INITIAL,
+      itemType: INITIAL_ITEM_TYPE,
+      assetType,
+      grams,
+      goldPurity,
+      quantity: 1,
+      note: typeof r.note === 'string' ? r.note : '',
+      date: typeof r.date === 'string' ? r.date : today(),
+      createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString(),
+    };
   }
-  if (r.assetType === 'silver' && r.goldPurity !== null) {
-    return { ...r, goldPurity: null };
+
+  let out = { ...r, recordType: RECORD_TYPE_ENTRY };
+  if (out.assetType === 'gold' && !GOLD_PURITY_ORDER.includes(out.goldPurity)) {
+    out = { ...out, goldPurity: LEGACY_GOLD_PURITY[out.itemType] || '22' };
   }
-  return r;
+  if (out.assetType === 'silver' && out.goldPurity !== null) {
+    out = { ...out, goldPurity: null };
+  }
+  return out;
 }
 
 function isValidRecord(r) {
-  return r
-    && (r.assetType === 'gold' || r.assetType === 'silver')
+  if (!r || !(r.assetType === 'gold' || r.assetType === 'silver')) return false;
+  if (!(Number(r.grams) > 0)) return false;
+
+  if (r.recordType === RECORD_TYPE_INITIAL) {
+    return r.itemType === INITIAL_ITEM_TYPE
+      && typeof r.date === 'string'
+      && (r.assetType === 'silver' || GOLD_PURITY_ORDER.includes(r.goldPurity));
+  }
+
+  return r.recordType === RECORD_TYPE_ENTRY
     && typeof r.itemType === 'string'
-    && Number(r.grams) > 0
     && typeof r.date === 'string';
 }
 
@@ -658,13 +717,14 @@ function formatMarketTRY(n) {
 
 function monthGrams(assetType, ym) {
   return data.records
-    .filter((r) => r.assetType === assetType && monthKey(r.date) === ym)
+    .filter((r) => r.assetType === assetType && monthKey(r.date) === ym && isEntryRecord(r))
     .reduce((sum, r) => sum + (Number(r.grams) || 0), 0);
 }
 
 function firstRecordDate() {
-  if (!data.records.length) return null;
-  return data.records.reduce((min, r) => (r.date < min ? r.date : min), data.records[0].date);
+  const entries = data.records.filter(isEntryRecord);
+  if (!entries.length) return null;
+  return entries.reduce((min, r) => (r.date < min ? r.date : min), entries[0].date);
 }
 
 // Son 12 takvim ayında en az 1 kayıt bulunan farklı ay sayısı.
@@ -676,7 +736,7 @@ function activeMonthsLast12() {
     validKeys.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
   const monthsWithRecords = new Set(
-    data.records.map((r) => monthKey(r.date)).filter((k) => validKeys.has(k))
+    data.records.filter(isEntryRecord).map((r) => monthKey(r.date)).filter((k) => validKeys.has(k))
   );
   return monthsWithRecords.size;
 }
@@ -712,7 +772,7 @@ function renderGreeting() {
     el.textContent = '';
     return;
   }
-  el.textContent = data.records.length > 0
+  el.textContent = data.records.some(isEntryRecord)
     ? `${name}, gramını büyütmeye devam et.`
     : `${name}, hoş geldin.`;
   el.classList.remove('hidden');
@@ -1036,9 +1096,27 @@ function renderHistory() {
 
 function renderHistoryItem(r) {
   const asset = ASSET_TYPES[r.assetType];
+  const parts = [];
+  if (isInitialRecord(r)) {
+    if (r.assetType === 'gold' && r.goldPurity) parts.push(purityLabel(r.goldPurity));
+    parts.push(formatGrams(r.grams));
+    const metaLine = parts.map(escapeHtml).join(' · ');
+    return `<div class="history-item history-item--initial asset-${r.assetType}" data-id="${r.id}">
+    <span class="history-item-icon" aria-hidden="true">${asset.icon}</span>
+    <div class="history-item-info">
+      <p class="history-item-name">${escapeHtml(itemLabel(r.assetType, r.itemType, r.goldPurity))}</p>
+      <p class="history-item-meta">${metaLine}</p>
+      <p class="history-item-sub history-item-sub--initial">Başlangıç birikimi</p>
+    </div>
+    <div class="history-item-actions">
+      <button type="button" class="btn-icon" data-action="edit-record" data-id="${r.id}" aria-label="Düzenle">✏️</button>
+      <button type="button" class="btn-icon" data-action="delete-record" data-id="${r.id}" aria-label="Sil">🗑️</button>
+    </div>
+  </div>`;
+  }
+
   const def = getItemDef(r.assetType, r.itemType, r.goldPurity);
   // Örnek: 22 Ayar · 1 adet · 1,75 gr  (ürün adı üstte başlık olarak gösterilir)
-  const parts = [];
   if (r.assetType === 'gold' && r.goldPurity) parts.push(purityLabel(r.goldPurity));
   if (def?.fixed && r.quantity >= 1) parts.push(`${r.quantity} adet`);
   parts.push(formatGrams(r.grams));
@@ -1174,6 +1252,10 @@ function openAddForm() {
 function openEditForm(id) {
   const r = data.records.find((x) => x.id === id);
   if (!r) return;
+  if (isInitialRecord(r)) {
+    openInitialModal(id);
+    return;
+  }
   editRecordId = id;
   document.getElementById('add-title').textContent = 'Kaydı Düzenle';
   document.getElementById('add-desc').textContent = 'Bu kaydın bilgilerini güncelle.';
@@ -1245,6 +1327,7 @@ function submitRecordForm() {
 
   const record = {
     id: generateId(),
+    recordType: RECORD_TYPE_ENTRY,
     assetType: formAsset,
     itemType,
     goldPurity,
@@ -1301,6 +1384,105 @@ function closeCelebration() {
   saveData();
   document.getElementById('celebrate-overlay').classList.add('hidden');
   switchView('home');
+}
+
+/* ---------------- Başlangıç birikimi ---------------- */
+function renderInitialPuritySegment() {
+  const seg = document.getElementById('initial-purity-segment');
+  seg.innerHTML = GOLD_PURITY_ORDER.map((p) => {
+    const active = p === initialFormPurity ? ' active' : '';
+    return `<button type="button" class="segment-btn${active}" data-purity="${p}" role="tab">${escapeHtml(GOLD_PURITIES[p].label)}</button>`;
+  }).join('');
+}
+
+function setInitialFormAsset(asset) {
+  initialFormAsset = asset;
+  document.querySelectorAll('#initial-asset-segment .segment-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.asset === asset);
+  });
+  document.getElementById('initial-purity-field').classList.toggle('hidden', asset !== 'gold');
+  if (asset === 'gold') renderInitialPuritySegment();
+}
+
+function setInitialFormPurity(purity) {
+  initialFormPurity = GOLD_PURITY_ORDER.includes(purity) ? purity : '24';
+  document.querySelectorAll('#initial-purity-segment .segment-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.purity === initialFormPurity);
+  });
+}
+
+function openInitialModal(editId = null) {
+  editInitialId = editId;
+  const form = document.getElementById('initial-form');
+  form.reset();
+
+  if (editId) {
+    const r = data.records.find((x) => x.id === editId);
+    if (!r || !isInitialRecord(r)) return;
+    document.getElementById('initial-modal-title').textContent = 'Başlangıç Birikimini Düzenle';
+    setInitialFormAsset(r.assetType);
+    if (r.assetType === 'gold') setInitialFormPurity(r.goldPurity);
+    document.getElementById('initial-grams-input').value = String(r.grams);
+  } else {
+    document.getElementById('initial-modal-title').textContent = 'Başlangıç Birikimi';
+    initialFormPurity = '24';
+    setInitialFormAsset('gold');
+  }
+
+  document.getElementById('initial-overlay').classList.remove('hidden');
+}
+
+function closeInitialModal() {
+  editInitialId = null;
+  document.getElementById('initial-overlay').classList.add('hidden');
+}
+
+function submitInitialForm() {
+  const grams = parseFloat(document.getElementById('initial-grams-input').value);
+  if (Number.isNaN(grams) || grams <= 0) {
+    showToast('Lütfen geçerli bir gram değeri gir.');
+    return;
+  }
+
+  const roundedGrams = Math.round(grams * 100) / 100;
+  const goldPurity = initialFormAsset === 'gold' ? initialFormPurity : null;
+
+  if (editInitialId) {
+    const r = data.records.find((x) => x.id === editInitialId);
+    if (r && isInitialRecord(r)) {
+      r.assetType = initialFormAsset;
+      r.goldPurity = goldPurity;
+      r.grams = roundedGrams;
+    }
+    silentMilestoneSync();
+    editInitialId = null;
+    closeInitialModal();
+    if (document.getElementById('history-view').classList.contains('hidden')) {
+      switchView('home');
+    } else {
+      renderHistory();
+    }
+    showToast('Başlangıç birikimi güncellendi.');
+    return;
+  }
+
+  const record = {
+    id: generateId(),
+    recordType: RECORD_TYPE_INITIAL,
+    assetType: initialFormAsset,
+    itemType: INITIAL_ITEM_TYPE,
+    goldPurity,
+    grams: roundedGrams,
+    quantity: 1,
+    note: '',
+    date: today(),
+    createdAt: new Date().toISOString(),
+  };
+  data.records.push(record);
+  silentMilestoneSync();
+  closeInitialModal();
+  switchView('home');
+  showToast('Başlangıç birikimi eklendi.');
 }
 
 /* ---------------- Silme ---------------- */
@@ -1472,6 +1654,9 @@ function showToast(msg) {
 /* ---------------- Olaylar ---------------- */
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
+document.getElementById('open-initial-home-btn').addEventListener('click', () => openInitialModal());
+document.getElementById('open-initial-history-btn').addEventListener('click', () => openInitialModal());
+document.getElementById('open-initial-start-btn').addEventListener('click', () => openInitialModal());
 document.getElementById('add-back-btn').addEventListener('click', () => switchView('home'));
 document.getElementById('history-back-btn').addEventListener('click', () => switchView('home'));
 
@@ -1538,6 +1723,23 @@ document.getElementById('goal-cancel-btn').addEventListener('click', closeGoalMo
 document.getElementById('goal-delete-btn').addEventListener('click', deleteGoal);
 document.getElementById('goal-overlay').addEventListener('click', (e) => {
   if (e.target.id === 'goal-overlay') closeGoalModal();
+});
+
+document.getElementById('initial-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitInitialForm();
+});
+document.getElementById('initial-cancel-btn').addEventListener('click', closeInitialModal);
+document.getElementById('initial-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'initial-overlay') closeInitialModal();
+});
+document.getElementById('initial-asset-segment').addEventListener('click', (e) => {
+  const btn = e.target.closest('.segment-btn');
+  if (btn) setInitialFormAsset(btn.dataset.asset);
+});
+document.getElementById('initial-purity-segment').addEventListener('click', (e) => {
+  const btn = e.target.closest('.segment-btn');
+  if (btn) setInitialFormPurity(btn.dataset.purity);
 });
 
 document.getElementById('celebrate-close').addEventListener('click', closeCelebration);

@@ -10,7 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=19">
+  <link rel="stylesheet" href="styles.css?v=21">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -79,6 +79,7 @@
         <p class="start-card-text">Büyük birikimler küçük başlangıçlarla oluşur.</p>
         <p class="start-card-accent">Bir gram yeter. Başlamak için. 🌱</p>
         <p class="start-card-foot">Dokunuyorsan senindir.</p>
+        <button type="button" class="text-link-btn start-card-initial-link" id="open-initial-start-btn">Zaten birikimin var mı? Başlangıç birikimini ekle</button>
       </section>
 
       <section class="journey-card" id="journey-card">
@@ -112,6 +113,9 @@
       <div class="home-actions">
         <button type="button" class="btn btn-primary btn-block" id="open-add-btn">+ Gram Ekle</button>
         <button type="button" class="btn btn-ghost btn-block" id="open-history-btn">📊 Toplam Birikimim</button>
+        <p class="initial-entry-link-wrap">
+          <button type="button" class="text-link-btn" id="open-initial-home-btn">Başlangıç birikimini ekle</button>
+        </p>
       </div>
 
       <footer class="footer">
@@ -218,6 +222,9 @@
         </div>
 
         <!-- Kayıt listesi -->
+        <p class="initial-entry-link-wrap initial-entry-link-wrap--history">
+          <button type="button" class="text-link-btn" id="open-initial-history-btn">Başlangıç birikimini ekle</button>
+        </p>
         <h3 class="savings-list-title">Kayıtlar</h3>
         <div id="history-list"></div>
         <p id="history-empty" class="empty-text hidden">Henüz gram eklemedin. İlk gramını eklemeye ne dersin?</p>
@@ -233,6 +240,36 @@
         <ul class="celebrate-stats" id="celebrate-stats"></ul>
         <p class="celebrate-footer">Gramını büyütmeye devam et.</p>
         <button type="button" class="btn btn-primary btn-block" id="celebrate-close">Panoma Dön</button>
+      </div>
+    </div>
+
+    <!-- BAŞLANGIÇ BİRİKİMİ -->
+    <div id="initial-overlay" class="modal-overlay hidden">
+      <div class="modal modal-compact initial-modal">
+        <h3 class="modal-title" id="initial-modal-title">Başlangıç Birikimi</h3>
+        <p class="modal-lead">Uygulamaya başlamadan önce sahip olduğun altın ve gümüşleri tek seferde ekleyebilirsin.</p>
+        <form id="initial-form" class="initial-form">
+          <div class="field">
+            <span class="field-label">Varlık</span>
+            <div class="segment" id="initial-asset-segment" role="tablist">
+              <button type="button" class="segment-btn active" data-asset="gold" role="tab">🥇 Altın</button>
+              <button type="button" class="segment-btn" data-asset="silver" role="tab">🥈 Gümüş</button>
+            </div>
+          </div>
+          <div class="field" id="initial-purity-field">
+            <span class="field-label">Ayar</span>
+            <div class="segment segment-purity" id="initial-purity-segment" role="tablist"></div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="initial-grams-input">Gram</label>
+            <div class="grams-input-wrap">
+              <input type="number" id="initial-grams-input" class="text-input" min="0.01" step="any" placeholder="0" inputmode="decimal" required>
+              <span class="grams-unit">gr</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Kaydet</button>
+          <button type="button" class="btn btn-ghost btn-block" id="initial-cancel-btn">Vazgeç</button>
+        </form>
       </div>
     </div>
 
@@ -297,6 +334,6 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>

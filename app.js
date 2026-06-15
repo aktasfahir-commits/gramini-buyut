@@ -12,6 +12,7 @@ const INITIAL_ITEM_TYPE = 'initial';
 const GOLD_GRAM_MILESTONES = [1, 5, 10, 25, 50, 100, 250, 500, 1000];
 const SILVER_GRAM_MILESTONES = [100, 250, 500, 1000, 5000, 10000];
 const GOAL_PERCENT_MILESTONES = [25, 50, 75, 100];
+const INITIAL_HOLDINGS_SUBTITLE = 'Uygulamaya başlamadan önceki birikim';
 
 /* ---------------- Varlık türleri ---------------- */
 // fixed: true → birim gram sabittir, gram = unitGrams × quantity (otomatik).
@@ -1124,19 +1125,35 @@ function renderHistory() {
   }).join('');
 }
 
+function buildHistoryMetaParts(r) {
+  const parts = [];
+  const def = getItemDef(r.assetType, r.itemType, r.goldPurity);
+
+  if (isInitialRecord(r)) {
+    if (r.assetType === 'silver') parts.push('Gümüş');
+    else if (r.goldPurity) parts.push(purityLabel(r.goldPurity));
+    parts.push(formatGrams(r.grams));
+    return parts;
+  }
+
+  if (r.assetType === 'silver') parts.push('Gümüş');
+  if (r.assetType === 'gold' && r.goldPurity) parts.push(purityLabel(r.goldPurity));
+  if (def?.fixed && r.quantity >= 1) parts.push(`${r.quantity} adet`);
+  parts.push(formatGrams(r.grams));
+  return parts;
+}
+
 function renderHistoryItem(r) {
   const asset = ASSET_TYPES[r.assetType];
-  const parts = [];
+  const metaLine = buildHistoryMetaParts(r).map(escapeHtml).join(' · ');
+
   if (isInitialRecord(r)) {
-    if (r.assetType === 'gold' && r.goldPurity) parts.push(purityLabel(r.goldPurity));
-    parts.push(formatGrams(r.grams));
-    const metaLine = parts.map(escapeHtml).join(' · ');
     return `<div class="history-item history-item--initial asset-${r.assetType}" data-id="${r.id}">
     <span class="history-item-icon" aria-hidden="true">${asset.icon}</span>
     <div class="history-item-info">
       <p class="history-item-name">${escapeHtml(itemLabel(r.assetType, r.itemType, r.goldPurity))}</p>
       <p class="history-item-meta">${metaLine}</p>
-      <p class="history-item-sub history-item-sub--initial">Başlangıç birikimi</p>
+      <p class="history-item-sub history-item-sub--initial">${escapeHtml(INITIAL_HOLDINGS_SUBTITLE)}</p>
     </div>
     <div class="history-item-actions">
       <button type="button" class="btn-icon" data-action="edit-record" data-id="${r.id}" aria-label="Düzenle">✏️</button>
@@ -1145,12 +1162,6 @@ function renderHistoryItem(r) {
   </div>`;
   }
 
-  const def = getItemDef(r.assetType, r.itemType, r.goldPurity);
-  // Örnek: 22 Ayar · 1 adet · 1,75 gr  (ürün adı üstte başlık olarak gösterilir)
-  if (r.assetType === 'gold' && r.goldPurity) parts.push(purityLabel(r.goldPurity));
-  if (def?.fixed && r.quantity >= 1) parts.push(`${r.quantity} adet`);
-  parts.push(formatGrams(r.grams));
-  const metaLine = parts.map(escapeHtml).join(' · ');
   const note = r.note
     ? `<p class="history-item-note">“${escapeHtml(r.note)}”</p>`
     : '';

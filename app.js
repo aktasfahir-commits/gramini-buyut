@@ -1046,30 +1046,39 @@ function renderMarketCard() {
 }
 
 async function loadMarketFeed(options = {}) {
-  const forceRefresh = options.forceRefresh === true;
+  const forceRefresh = options.forceRefresh === true || options.force === true;
   try {
     const url = forceRefresh
-      ? `./data/market.json?_=${Date.now()}`
+      ? `./data/market.json?ts=${Date.now()}`
       : './data/market.json';
     const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return;
+    if (!res.ok) return false;
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('json')) return false;
+
     const parsed = parseMarketFeed(await res.json());
-    if (!parsed) return;
+    if (!parsed) return false;
+
     marketFeed = parsed;
     renderMarketCard();
     renderEstimatePanel();
+    return true;
   } catch {
-    // Sessizce kal; kart boş durum mesajını gösterir.
+    return false;
   }
 }
 
 async function refreshMarketFeed() {
   const btn = document.getElementById('market-refresh-btn');
   if (!btn || btn.disabled) return;
+
   btn.disabled = true;
   btn.textContent = 'Yenileniyor…';
+
   try {
-    await loadMarketFeed({ forceRefresh: true });
+    const ok = await loadMarketFeed({ force: true });
+    if (!ok) showToast('Fiyatlar yenilenemedi.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Yenile';
@@ -1761,7 +1770,10 @@ brandHomeBtn.addEventListener('keydown', (e) => {
   }
 });
 
-document.getElementById('market-refresh-btn').addEventListener('click', refreshMarketFeed);
+document.getElementById('market-refresh-btn')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  refreshMarketFeed();
+});
 document.getElementById('history-records-toggle').addEventListener('click', toggleHistoryRecords);
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));

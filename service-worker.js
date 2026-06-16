@@ -1,14 +1,13 @@
 /* Gramını Büyüt — service worker (app shell cache, çevrimdışı çalışma) */
 
-const CACHE_NAME = 'gramini-buyut-v31';
+const CACHE_NAME = 'gramini-buyut-v32';
 
-// data/market.json kasıtlı olarak APP_SHELL'de değil.
-// Fiyat dosyası network-first ile mümkün olduğunca güncel kalır; offline'da son cache kullanılır.
+// data/market.json kasıtlı olarak APP_SHELL'de değil ve fetch ile yakalanmaz.
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=26',
-  './app.js?v=30',
+  './styles.css?v=27',
+  './app.js?v=31',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -16,6 +15,10 @@ const APP_SHELL = [
   './icons/icon-maskable.png',
   './icons/apple-touch-icon.png',
 ];
+
+function isMarketJsonRequest(url) {
+  return url.pathname.endsWith('/data/market.json');
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -31,11 +34,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Sadece aynı-origin GET istekleri: network-first.
-// Çevrimiçiyken her zaman güncel kod ve market.json; çevrimdışıyken cache fallback.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // market.json: SW bypass — tarayıcı doğrudan ağdan okur, cache'e yazılmaz.
+  if (isMarketJsonRequest(url)) return;
 
   event.respondWith(
     fetch(request)

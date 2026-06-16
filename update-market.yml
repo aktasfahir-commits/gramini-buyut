@@ -1,9 +1,9 @@
 name: Update market data
 
+# Scheduled workflows yalnızca repo default branch'indeki workflow dosyasından çalışır (main).
 on:
   schedule:
-    # Hafta içi her 30 dakikada bir (UTC)
-    - cron: '*/30 * * * 1-5'
+    - cron: "*/30 * * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -17,25 +17,46 @@ jobs:
   update-market:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Fetch and write market.json
-        run: node scripts/update-market.js
-
-      - name: Commit market.json if changed
+        id: fetch_market
         run: |
+          set -e
+          echo "Workflow tetiklendi: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          node scripts/update-market.js
+          echo "market.json updatedAt:"
+          node -e "const m=require('./data/market.json'); console.log(m.updatedAt || '(yok)'); console.log('status:', m.status);"
+
+      - name: Commit and push market.json
+        run: |
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market.json
-          if git diff --staged --quiet; then
-            echo "market.json değişmedi."
-          else
-            git commit -m "chore: güncel market.json"
-            git push
+
+          if [ ! -f data/market.json ]; then
+            echo "::error::data/market.json bulunamadı."
+            exit 1
           fi
+
+          git add data/market.json
+
+          if git diff --staged --quiet; then
+            echo "::error::market.json değişmedi — commit atılmadı."
+            echo "Olası neden: fetch başarısız oldu ve mevcut dosya korundu (updatedAt güncellenmedi)."
+            exit 1
+          fi
+
+          git commit -m "chore: güncel market.json"
+          git push origin HEAD:main
+          echo "market.json main branch'e push edildi."

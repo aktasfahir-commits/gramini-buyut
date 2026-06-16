@@ -87,7 +87,10 @@ async function fetchText(url) {
   try {
     const res = await fetch(url, {
       signal: ctrl.signal,
-      headers: { Accept: 'text/html,application/xhtml+xml' },
+      headers: {
+        Accept: 'text/html,application/xhtml+xml',
+        'User-Agent': 'GraminiBuyut-MarketBot/1.0 (+https://github.com/)',
+      },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
@@ -166,9 +169,15 @@ function writeMarket(market) {
   fs.writeFileSync(OUT_PATH, `${JSON.stringify(market, null, 2)}\n`, 'utf8');
 }
 
-function preserveExistingAndExit() {
-  console.log('Yeni veri alınamadı, mevcut market.json korundu.');
-  process.exit(0);
+function metalsEqual(a, b) {
+  if (!a || !b) return false;
+  return a.buyTRY === b.buyTRY && a.sellTRY === b.sellTRY && a.label === b.label;
+}
+
+function preserveExistingAndExit(reason) {
+  console.error(`HATA: ${reason}`);
+  console.error('Yeni veri alınamadı; mevcut market.json korundu ve updatedAt güncellenmedi.');
+  process.exit(1);
 }
 
 async function fetchInstitutionQuote(institution) {
@@ -200,34 +209,42 @@ async function main() {
 
   if (!quote) {
     if (existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
-      preserveExistingAndExit();
+      preserveExistingAndExit('Hiçbir kurumdan gram altın/gümüş fiyatı alınamadı.');
     }
 
-    writeMarket({ ...EMPTY_MARKET });
+    writeMarket({ ...EMPTY_MARKET, updatedAt: new Date().toISOString() });
     console.log('Hiçbir kurumdan veri alınamadı; market.json boş yazıldı.');
     process.exit(0);
   }
 
   const { gold, silver } = quote;
   const status = resolveStatus(gold, silver);
+  const updatedAt = new Date().toISOString();
   const market = {
     gold,
     silver,
-    updatedAt: new Date().toISOString(),
+    updatedAt,
     source: 'auto',
     status,
   };
 
   writeMarket(market);
-  console.log(`market.json güncellendi (status: ${market.status}).`);
+
+  const pricesUnchanged = existing
+    && metalsEqual(existing.gold, gold)
+    && metalsEqual(existing.silver, silver);
+  if (pricesUnchanged) {
+    console.log(`Fiyatlar değişmedi; updatedAt yine de güncellendi: ${updatedAt}`);
+  }
+  console.log(`market.json güncellendi (status: ${status}, updatedAt: ${updatedAt}).`);
 }
 
 main().catch((err) => {
   console.error('Beklenmeyen hata:', err.message);
   const existing = readExistingMarket();
   if (existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
-    preserveExistingAndExit();
+    preserveExistingAndExit(`Beklenmeyen hata: ${err.message}`);
   }
-  writeMarket({ ...EMPTY_MARKET });
-  process.exit(0);
+  writeMarket({ ...EMPTY_MARKET, updatedAt: new Date().toISOString() });
+  process.exit(1);
 });

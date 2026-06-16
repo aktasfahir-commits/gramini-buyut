@@ -10,7 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -110,7 +110,10 @@
       </section>
 
       <section class="market-card" id="market-card">
-        <h2 class="market-card-title">Günlük Piyasa</h2>
+        <div class="market-card-head">
+          <h2 class="market-card-title">Günlük Piyasa</h2>
+          <button type="button" class="market-refresh-btn" id="market-refresh-btn" aria-label="Fiyatları yenile">Yenile</button>
+        </div>
         <div class="market-card-body" id="market-card-body"></div>
         <p class="market-card-foot">Fiyatlar değişir. Gramlar kalır.</p>
       </section>
@@ -341,6 +344,6 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>

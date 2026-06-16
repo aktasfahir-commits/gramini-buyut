@@ -589,13 +589,48 @@ body {
   box-shadow: none;
 }
 
+.market-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .market-card-title {
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin: 0;
+}
+
+.market-refresh-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary-hover);
+  cursor: pointer;
+}
+
+.market-refresh-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.market-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.market-refresh-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .market-rows { display: flex; flex-direction: column; gap: 6px; }
@@ -663,6 +698,18 @@ body {
   margin-top: 10px;
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.market-stale {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #9a7b1a;
+  text-align: center;
+}
+
+.market-stale--high {
+  color: #b45309;
 }
 
 .market-empty {

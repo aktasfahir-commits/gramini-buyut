@@ -1001,15 +1001,35 @@ function marketMetalBlock(title, metal) {
     </div>`;
 }
 
+function marketDataAgeHours() {
+  if (!marketFeed.updatedAt) return null;
+  const updated = new Date(marketFeed.updatedAt);
+  if (Number.isNaN(updated.getTime())) return null;
+  return (Date.now() - updated.getTime()) / 3600000;
+}
+
+function marketStalenessWarningHtml() {
+  const ageHours = marketDataAgeHours();
+  if (ageHours == null) return '';
+  if (ageHours >= 6) {
+    return '<p class="market-stale market-stale--high">Fiyat verisi eski olabilir.</p>';
+  }
+  if (ageHours >= 2) {
+    return '<p class="market-stale">Fiyat verisi bir süredir güncellenmedi.</p>';
+  }
+  return '';
+}
+
 // Günlük Piyasa: bilgilendirme amaçlı, portföy/kâr-zarar yok.
 function renderMarketCard() {
   const body = document.getElementById('market-card-body');
   const m = marketFeed;
   const hasGold = hasMarketMetalPrices(m.gold);
   const hasSilver = hasMarketMetalPrices(m.silver);
+  const staleLine = marketStalenessWarningHtml();
 
   if (!hasGold && !hasSilver) {
-    body.innerHTML = '<p class="market-unavailable">Fiyat bilgisi alınamadı</p>';
+    body.innerHTML = `<p class="market-unavailable">Fiyat bilgisi alınamadı</p>${staleLine}`;
     return;
   }
 
@@ -1022,12 +1042,16 @@ function renderMarketCard() {
       ${marketMetalBlock('Gram Altın', m.gold)}
       ${marketMetalBlock('Gram Gümüş', m.silver)}
     </div>
-    ${updatedLine}`;
+    ${updatedLine}${staleLine}`;
 }
 
-async function loadMarketFeed() {
+async function loadMarketFeed(options = {}) {
+  const forceRefresh = options.forceRefresh === true;
   try {
-    const res = await fetch('./data/market.json', { cache: 'no-store' });
+    const url = forceRefresh
+      ? `./data/market.json?_=${Date.now()}`
+      : './data/market.json';
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return;
     const parsed = parseMarketFeed(await res.json());
     if (!parsed) return;
@@ -1036,6 +1060,19 @@ async function loadMarketFeed() {
     renderEstimatePanel();
   } catch {
     // Sessizce kal; kart boş durum mesajını gösterir.
+  }
+}
+
+async function refreshMarketFeed() {
+  const btn = document.getElementById('market-refresh-btn');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Yenileniyor…';
+  try {
+    await loadMarketFeed({ forceRefresh: true });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Yenile';
   }
 }
 
@@ -1724,6 +1761,7 @@ brandHomeBtn.addEventListener('keydown', (e) => {
   }
 });
 
+document.getElementById('market-refresh-btn').addEventListener('click', refreshMarketFeed);
 document.getElementById('history-records-toggle').addEventListener('click', toggleHistoryRecords);
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));

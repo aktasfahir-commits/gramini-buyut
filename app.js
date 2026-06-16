@@ -95,7 +95,7 @@ const MOTIVATION_CARDS = [
   { id: 'm9', type: 'gelecek', text: 'Bugünün küçük gramı, yarının büyük rahatlığı olabilir.' },
   { id: 'm10', type: 'gram', text: 'Gram gram büyüyen şey sadece birikimin değil, özgüvenin de.' },
   { id: 'm11', type: 'kucuk-baslangic', text: 'Bir gram küçük görünebilir. Ama sıfırdan büyüktür.' },
-  { id: 'm12', type: 'kucuk-baslangic', text: 'Bugün az olabilir. Ama hiç yoktan iyidir.' },
+  { id: 'm12', type: 'kucuk-baslangic', text: 'Bugün az olabilir ama az, yoktan çoktur.' },
   { id: 'm13', type: 'gelecek', text: 'Gramını büyütmek, gelecekteki kendine selam göndermektir.' },
   { id: 'm14', type: 'sabir', text: 'Altın da gümüş de sabrı sever.' },
   { id: 'm15', type: 'gram', text: 'Her gram, kendi yolculuğunun bir parçası.' },

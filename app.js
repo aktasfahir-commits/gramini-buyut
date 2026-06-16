@@ -81,19 +81,58 @@ const LEGACY_ITEM_REMAP = {
 };
 
 /* ---------------- Motivasyon kartları ---------------- */
-// V1: statik havuz. İleride 200-300 karta ve fiyat temelli kartlara büyüyecek.
-// type alanı şimdiden ileri uyumluluk için: 'genel' | 'gunluk-ornek' | 'fiyat-dusus' | 'fiyat-artis'
-// TODO: İleride motivasyon kartı önizleme/test modu eklenebilir.
+// V1: geniş statik havuz + hedef / başlangıç birikimi koşullu ek mesajlar.
+// type: ileri uyumluluk için (genel, gram, hedef, baslangic-birikim, ...)
 const MOTIVATION_CARDS = [
   { id: 'm1', type: 'gunluk-ornek', text: 'Kahvene para harca. Ama unutma, gram altın daha lezzetli.' },
-  { id: 'm2', type: 'genel', text: 'Hayatı yaşa ama gelecek bir gün gelecek, bunu da unutma.' },
-  { id: 'm3', type: 'genel', text: 'Bugün gelecekteki kendine küçük bir hediye bırak.' },
+  { id: 'm2', type: 'gelecek', text: 'Hayatı yaşa ama gelecek bir gün gelecek, bunu da unutma.' },
+  { id: 'm3', type: 'gelecek', text: 'Bugün gelecekteki kendine küçük bir hediye bırak.' },
   { id: 'm4', type: 'genel', text: 'Fiyatlar değişir. Gramlar kalır.' },
-  { id: 'm5', type: 'genel', text: 'Dokunuyorsan Senindir.' },
-  { id: 'm6', type: 'genel', text: 'Hayatı yaşa. Geleceğini de unutma.' },
-  { id: 'm7', type: 'genel', text: 'Küçük ama düzenli. Gerçek birikim böyle büyür.' },
-  { id: 'm8', type: 'genel', text: 'Tohumlar fidana, gramlar eve, arabaya, tatile dönmeli yurdumda.' },
+  { id: 'm5', type: 'felsefe', text: 'Dokunuyorsan senindir.' },
+  { id: 'm6', type: 'gelecek', text: 'Hayatı yaşa. Geleceğini de unutma.' },
+  { id: 'm7', type: 'kucuk-baslangic', text: 'Küçük ama düzenli. Gerçek birikim böyle büyür.' },
+  { id: 'm8', type: 'gelecek', text: 'Tohumlar fidana, gramlar eve, arabaya, tatile dönmeli yurdumda.' },
+  { id: 'm9', type: 'gelecek', text: 'Bugünün küçük gramı, yarının büyük rahatlığı olabilir.' },
+  { id: 'm10', type: 'gram', text: 'Gram gram büyüyen şey sadece birikimin değil, özgüvenin de.' },
+  { id: 'm11', type: 'kucuk-baslangic', text: 'Bir gram küçük görünebilir. Ama sıfırdan büyüktür.' },
+  { id: 'm12', type: 'kucuk-baslangic', text: 'Bugün az olabilir. Ama hiç yoktan iyidir.' },
+  { id: 'm13', type: 'gelecek', text: 'Gramını büyütmek, gelecekteki kendine selam göndermektir.' },
+  { id: 'm14', type: 'sabir', text: 'Altın da gümüş de sabrı sever.' },
+  { id: 'm15', type: 'gram', text: 'Her gram, kendi yolculuğunun bir parçası.' },
+  { id: 'm16', type: 'sabir', text: 'Biriktirmek acele işi değil; sürdürülebilir alışkanlık işi.' },
+  { id: 'm17', type: 'kucuk-baslangic', text: 'Küçük adımlar büyük hedefleri taşır.' },
+  { id: 'm18', type: 'gelecek', text: 'Geleceğin bugün attığın gram kadar güçlü olur.' },
+  { id: 'm19', type: 'sabir', text: 'Sabır, fiziksel birikimin en güvenilir yol arkadaşıdır.' },
+  { id: 'm20', type: 'gram', text: 'Gösteriş değil, gerçek birikim. Gram gram.' },
+  { id: 'm21', type: 'gelecek', text: 'Bir gün bugünkü gramına teşekkür edeceksin.' },
+  { id: 'm22', type: 'altin-gumus', text: 'Altın ve gümüş kalıcı birikimin sessiz taşlarıdır.' },
+  { id: 'm23', type: 'felsefe', text: 'Geleceğine dokunuyorsan, zaten doğru yoldasın.' },
+  { id: 'm24', type: 'harcama-denge', text: 'Harcamak kötü değil; dengeyle biriktirmek güzeldir.' },
+  { id: 'm25', type: 'gelecek', text: 'Uzun vadede en büyük konfor küçük düzenlerle başlar.' },
+  { id: 'm26', type: 'gram', text: 'Gelecek bir gün diye ertelenmez; gram gram kurulur.' },
 ];
+
+const GOAL_MOTIVATION_CARDS = [
+  { id: 'g1', type: 'hedef', text: 'Hedefin artık sadece bir fikir değil, ölçülebilir bir yol.' },
+  { id: 'g2', type: 'hedef', text: 'Hedefin seni baskılamasın; yolculuğunu göstersin.' },
+  { id: 'g3', type: 'hedef', text: 'Ölçülebilir hedefler, küçük adımları değerli kılar.' },
+  { id: 'g4', type: 'hedef', text: 'Hedefine doğru ilerliyorsun; bugün de bir katman ekledin.' },
+  { id: 'g5', type: 'hedef', text: 'Bir gün hedefin gerçek gramına dönüşecek.' },
+];
+
+const INITIAL_MOTIVATION_CARDS = [
+  { id: 'i1', type: 'baslangic-birikim', text: 'Başladığın yer sıfır değil. Bu büyük avantaj.' },
+  { id: 'i2', type: 'baslangic-birikim', text: 'Mevcut birikimin üzerine inşa ediyorsun; bu güçlü bir başlangıç.' },
+  { id: 'i3', type: 'baslangic-birikim', text: 'Bugün eklediğin her gram, elindekilerin üstüne konuyor.' },
+  { id: 'i4', type: 'baslangic-birikim', text: 'Sıfırdan değil, kendi temelinden büyüyorsun.' },
+];
+
+function getMotivationPool() {
+  const pool = [...MOTIVATION_CARDS];
+  if (data.goals.length > 0) pool.push(...GOAL_MOTIVATION_CARDS);
+  if (data.records.some(isInitialRecord)) pool.push(...INITIAL_MOTIVATION_CARDS);
+  return pool;
+}
 
 /* ---------------- Fiyat / tahmini değer ---------------- */
 // Ana ekranda asla TL gösterilmez. Tahmini değer yalnızca "Toplam Birikimim" ekranında,
@@ -873,7 +912,7 @@ function renderJourney() {
 }
 
 function renderMotivation() {
-  const card = stablePick(`mot|${today()}`, MOTIVATION_CARDS);
+  const card = stablePick(`mot|${today()}`, getMotivationPool());
   document.getElementById('motivation-text').textContent = card.text;
 }
 

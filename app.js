@@ -1291,6 +1291,7 @@ function switchView(view) {
   document.getElementById('home-view').classList.toggle('hidden', view !== 'home');
   document.getElementById('add-view').classList.toggle('hidden', view !== 'add');
   document.getElementById('history-view').classList.toggle('hidden', view !== 'history');
+  document.getElementById('settings-view').classList.toggle('hidden', view !== 'settings');
   if (view === 'home') renderHome();
   else if (view === 'history') {
     historyRecordsExpanded = false;
@@ -1664,21 +1665,27 @@ function confirmDelete() {
 }
 
 /* ---------------- Hoş geldin / uygulama hakkında ---------------- */
+let onboardingFromSettings = false;
+
 function maybeShowOnboarding() {
   if (data.settings.onboardingSeen) return;
+  onboardingFromSettings = false;
   document.getElementById('onboarding-overlay').classList.remove('hidden');
 }
 
 function dismissOnboarding() {
-  if (!data.settings.onboardingSeen) {
+  const fromSettings = onboardingFromSettings;
+  onboardingFromSettings = false;
+  if (!fromSettings && !data.settings.onboardingSeen) {
     data.settings.onboardingSeen = true;
     saveData();
   }
   document.getElementById('onboarding-overlay').classList.add('hidden');
-  maybeAskName();
+  if (!fromSettings) maybeAskName();
 }
 
 function openOnboarding() {
+  onboardingFromSettings = true;
   document.getElementById('onboarding-overlay').classList.remove('hidden');
 }
 
@@ -1839,6 +1846,9 @@ document.getElementById('market-refresh-btn')?.addEventListener('click', (e) => 
 document.getElementById('history-records-toggle').addEventListener('click', toggleHistoryRecords);
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
+document.getElementById('open-settings-btn').addEventListener('click', () => switchView('settings'));
+document.getElementById('settings-back-btn').addEventListener('click', () => switchView('home'));
+document.getElementById('settings-about-btn').addEventListener('click', openOnboarding);
 document.getElementById('open-initial-start-btn').addEventListener('click', () => openInitialModal());
 document.getElementById('add-back-btn').addEventListener('click', () => switchView('home'));
 document.getElementById('history-back-btn').addEventListener('click', () => switchView('home'));

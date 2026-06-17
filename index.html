@@ -10,7 +10,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=31">
+  <link rel="stylesheet" href="styles.css?v=32">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -84,11 +84,12 @@
       </section>
 
       <section class="start-card hidden" id="start-card">
-        <h2 class="start-card-title">İlk gram</h2>
-        <p class="start-card-text">Büyük birikimler küçük başlangıçlarla oluşur.</p>
-        <p class="start-card-accent">Bir gram yeter. Başlamak için. 🌱</p>
-        <p class="start-card-foot">Dokunuyorsan senindir.</p>
-        <button type="button" class="text-link-btn start-card-initial-link hidden" id="open-initial-start-btn">Zaten birikimin var mı? Başlangıç birikimini ekle</button>
+        <h2 class="start-card-title">İlk adımı seç</h2>
+        <p class="start-card-text">Zaten birikimin varsa başlangıç birikimini ekle.<br>Yeni başlıyorsan ilk gramını kaydet.</p>
+        <div class="start-card-actions">
+          <button type="button" class="btn btn-ghost start-card-btn" id="start-card-initial-btn">Başlangıç Birikimi Ekle</button>
+          <button type="button" class="btn btn-primary start-card-btn" id="start-card-first-gram-btn">İlk Gramımı Ekle</button>
+        </div>
       </section>
 
       <section class="journey-card" id="journey-card">
@@ -377,6 +378,6 @@
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <script src="app.js?v=35"></script>
+  <script src="app.js?v=36"></script>
 </body>
 </html>

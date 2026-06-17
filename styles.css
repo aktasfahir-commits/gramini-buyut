@@ -315,29 +315,27 @@ body {
 }
 
 .start-card-text {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.55;
   color: #5c4a14;
+  margin-bottom: 16px;
 }
 
-.start-card-accent {
-  margin-top: 10px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--primary-hover);
+.start-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.start-card-foot {
-  margin-top: 14px;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.01em;
+.start-card-btn {
+  min-height: 44px;
+  padding: 11px 14px;
+  font-size: 0.88rem;
 }
 
-.start-card-initial-link {
-  margin-top: 14px;
+.start-card-btn.btn-primary {
+  box-shadow: 0 2px 10px rgba(107, 83, 16, 0.18);
 }
 
 .text-link-btn {

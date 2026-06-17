@@ -529,23 +529,10 @@ function finalizeSettings(settings, records) {
   return out;
 }
 
-function shouldShowInitialHoldingsPrompt() {
-  if (data.settings.initialHoldingsPromptDismissed) return false;
-  if (data.records.some(isEntryRecord)) return false;
-  if (data.records.some(isInitialRecord)) return false;
-  return true;
-}
-
 function dismissInitialHoldingsPrompt() {
   if (data.settings.initialHoldingsPromptDismissed) return;
   data.settings.initialHoldingsPromptDismissed = true;
   saveData();
-}
-
-function renderInitialHoldingsPrompt() {
-  const btn = document.getElementById('open-initial-start-btn');
-  if (!btn) return;
-  btn.classList.toggle('hidden', !shouldShowInitialHoldingsPrompt());
 }
 
 function normalizePriceState(p) {
@@ -880,16 +867,21 @@ function renderJourney() {
   const firstEl = document.getElementById('journey-first-date');
   const daysEl = document.getElementById('journey-days');
   const rhythmEl = document.getElementById('journey-rhythm');
+  const hasRecords = data.records.length > 0;
 
-  // Henüz kayıt yokken: yolculuk kartını gizle, başlangıç kartını göster.
-  if (!first) {
+  if (!hasRecords) {
     journeyCard.classList.add('hidden');
     startCard.classList.remove('hidden');
-    renderInitialHoldingsPrompt();
     return;
   }
-  // İlk kayıttan sonra başlangıç kartı tamamen kaybolur.
+
   startCard.classList.add('hidden');
+
+  if (!first) {
+    journeyCard.classList.add('hidden');
+    return;
+  }
+
   journeyCard.classList.remove('hidden');
 
   firstEl.textContent = formatTurkishDate(first);
@@ -1846,7 +1838,8 @@ document.getElementById('history-records-toggle').addEventListener('click', togg
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
 document.getElementById('open-onboarding-btn').addEventListener('click', openOnboarding);
-document.getElementById('open-initial-start-btn').addEventListener('click', () => openInitialModal());
+document.getElementById('start-card-initial-btn').addEventListener('click', () => openInitialModal());
+document.getElementById('start-card-first-gram-btn').addEventListener('click', openAddForm);
 document.getElementById('add-back-btn').addEventListener('click', () => switchView('home'));
 document.getElementById('history-back-btn').addEventListener('click', () => switchView('home'));
 

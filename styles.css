@@ -1328,7 +1328,7 @@ body {
 
 /* Footer */
 .footer { text-align: center; margin-top: 22px; }
-.footer-settings-btn {
+.footer-help-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1345,56 +1345,13 @@ body {
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.footer-settings-btn:hover { background: var(--surface-2); }
-.footer-settings-btn:focus-visible {
+.footer-help-btn:hover { background: var(--surface-2); }
+.footer-help-btn:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 .footer-tagline { font-weight: 700; color: var(--primary-hover); font-size: 0.9rem; }
 .footer-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; }
-
-.settings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  min-height: 52px;
-  padding: 14px 16px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.settings-row:hover { background: var(--surface); }
-.settings-row:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-.settings-row-label {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.settings-row-chevron {
-  flex-shrink: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--text-muted);
-}
 
 /* Toast */
 .toast {

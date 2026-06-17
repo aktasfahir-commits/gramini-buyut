@@ -99,6 +99,39 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Home help button */
+.home-help-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.home-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--gold-from), var(--gold-to));
+  box-shadow: var(--shadow);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--gold-ink);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.15s ease;
+}
+
+.home-help-btn:hover { box-shadow: var(--shadow-hover); }
+.home-help-btn:active { transform: scale(0.98); }
+.home-help-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
 /* Total cards (en önemli metrikler) */
 .totals {
   display: grid;
@@ -1328,28 +1361,6 @@ body {
 
 /* Footer */
 .footer { text-align: center; margin-top: 22px; }
-.footer-help-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 10px 18px;
-  margin-bottom: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.footer-help-btn:hover { background: var(--surface-2); }
-.footer-help-btn:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
 .footer-tagline { font-weight: 700; color: var(--primary-hover); font-size: 0.9rem; }
 .footer-note { color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; }
 

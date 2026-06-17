@@ -1216,6 +1216,76 @@ body {
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
 .modal-actions .btn { flex: 1; }
 
+/* Hoş geldin / uygulama hakkında */
+.onboarding-overlay {
+  align-items: flex-end;
+  padding: 16px;
+}
+
+.onboarding-modal {
+  max-width: 420px;
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 20px 18px;
+  text-align: left;
+}
+
+.onboarding-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.onboarding-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.onboarding-body p { margin: 0 0 10px; }
+
+.onboarding-emphasis {
+  font-weight: 800;
+  color: var(--primary-hover);
+  font-size: 1rem;
+}
+
+.onboarding-subtitle {
+  font-weight: 800;
+  margin-top: 4px !important;
+}
+
+.onboarding-list {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+
+.onboarding-list li {
+  margin-bottom: 6px;
+}
+
+.onboarding-list li:last-child { margin-bottom: 0; }
+
+.onboarding-signoff {
+  font-weight: 700;
+  color: var(--primary-hover);
+  margin-top: 4px !important;
+}
+
+.onboarding-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  flex-shrink: 0;
+}
+
 .delete-record-name { font-weight: 800; margin: 10px 0; font-size: 1rem; }
 
 /* Celebrate */

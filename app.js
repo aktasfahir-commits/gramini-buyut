@@ -171,7 +171,7 @@ function emptyData() {
     version: DATA_VERSION,
     records: [],
     goals: [],
-    settings: { showEstimatedValue: false, name: null, nameAsked: false, initialHoldingsPromptDismissed: false },
+    settings: { showEstimatedValue: false, name: null, nameAsked: false, initialHoldingsPromptDismissed: false, onboardingSeen: false },
     priceState: { ...DEFAULT_PRICE_STATE },
     achievements: emptyAchievements(),
   };
@@ -513,16 +513,20 @@ function normalizeSettings(s) {
     name,
     nameAsked: src.nameAsked === true,
     initialHoldingsPromptDismissed: src.initialHoldingsPromptDismissed === true,
+    onboardingSeen: src.onboardingSeen === true,
   };
 }
 
 function finalizeSettings(settings, records) {
   const normalized = normalizeSettings(settings);
-  if (normalized.initialHoldingsPromptDismissed) return normalized;
-  if (Array.isArray(records) && records.length > 0) {
-    return { ...normalized, initialHoldingsPromptDismissed: true };
+  let out = normalized;
+  if (!out.initialHoldingsPromptDismissed && Array.isArray(records) && records.length > 0) {
+    out = { ...out, initialHoldingsPromptDismissed: true };
   }
-  return normalized;
+  if (!out.onboardingSeen && Array.isArray(records) && records.length > 0) {
+    out = { ...out, onboardingSeen: true };
+  }
+  return out;
 }
 
 function shouldShowInitialHoldingsPrompt() {
@@ -1659,6 +1663,25 @@ function confirmDelete() {
   showToast('Kayıt silindi.');
 }
 
+/* ---------------- Hoş geldin / uygulama hakkında ---------------- */
+function maybeShowOnboarding() {
+  if (data.settings.onboardingSeen) return;
+  document.getElementById('onboarding-overlay').classList.remove('hidden');
+}
+
+function dismissOnboarding() {
+  if (!data.settings.onboardingSeen) {
+    data.settings.onboardingSeen = true;
+    saveData();
+  }
+  document.getElementById('onboarding-overlay').classList.add('hidden');
+  maybeAskName();
+}
+
+function openOnboarding() {
+  document.getElementById('onboarding-overlay').classList.remove('hidden');
+}
+
 /* ---------------- İsim (ilk açılışta bir kez) ---------------- */
 function maybeAskName() {
   if (data.settings.nameAsked) return;
@@ -1902,6 +1925,12 @@ document.getElementById('initial-purity-segment').addEventListener('click', (e) 
   if (btn) setInitialFormPurity(btn.dataset.purity);
 });
 
+document.getElementById('onboarding-start-btn').addEventListener('click', dismissOnboarding);
+document.getElementById('onboarding-got-it-btn').addEventListener('click', dismissOnboarding);
+document.getElementById('onboarding-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'onboarding-overlay') dismissOnboarding();
+});
+
 document.getElementById('celebrate-close').addEventListener('click', closeCelebration);
 document.getElementById('delete-cancel').addEventListener('click', closeDeleteModal);
 document.getElementById('delete-confirm').addEventListener('click', confirmDelete);
@@ -1913,7 +1942,11 @@ document.getElementById('delete-overlay').addEventListener('click', (e) => {
 loadData();
 setFormAsset('gold');
 switchView('home');
-maybeAskName();
+if (data.settings.onboardingSeen) {
+  maybeAskName();
+} else {
+  maybeShowOnboarding();
+}
 loadMarketFeed();
 
 /* ---------------- Service worker (PWA) ---------------- */

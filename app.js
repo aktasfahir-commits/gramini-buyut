@@ -1171,6 +1171,27 @@ function renderEstimatePanel() {
     <p class="estimate-note">Bu değer bilgilendirme amaçlı yaklaşık değerdir. Alım-satım kanallarına göre değişebilir. Altın ayarına göre yaklaşık hesaplanır; işçilik ve ürün farkları dahil değildir.</p>`;
 }
 
+function renderInitialEditButton() {
+  const wrap = document.getElementById('initial-edit-wrap');
+  if (!wrap) return;
+  wrap.classList.toggle('hidden', !data.records.some(isInitialRecord));
+}
+
+function openInitialRecordsForEdit() {
+  historyRecordsExpanded = true;
+  renderHistoryRecordsPanel();
+  const firstInitial = document.querySelector('#history-list .history-item--initial');
+  if (firstInitial) {
+    firstInitial.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    firstInitial.classList.remove('history-item--highlight');
+    void firstInitial.offsetWidth;
+    firstInitial.classList.add('history-item--highlight');
+    setTimeout(() => firstInitial.classList.remove('history-item--highlight'), 1400);
+    return;
+  }
+  document.getElementById('history-records-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 /* ---------------- Kayıt listesi render ---------------- */
 function renderHistoryRecordsPanel() {
   const panel = document.getElementById('history-records-panel');
@@ -1220,6 +1241,7 @@ function toggleHistoryRecords() {
 function renderHistory() {
   renderSavingsSummary();
   renderEstimateOption();
+  renderInitialEditButton();
   renderHistoryRecordsPanel();
 }
 
@@ -1907,6 +1929,7 @@ document.getElementById('market-refresh-btn')?.addEventListener('click', (e) => 
   refreshMarketFeed();
 });
 document.getElementById('history-records-toggle').addEventListener('click', toggleHistoryRecords);
+document.getElementById('edit-initial-records-btn').addEventListener('click', openInitialRecordsForEdit);
 document.getElementById('open-add-btn').addEventListener('click', openAddForm);
 document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
 document.getElementById('open-onboarding-btn').addEventListener('click', openOnboarding);

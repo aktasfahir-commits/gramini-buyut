@@ -378,6 +378,30 @@ body {
   margin-top: 16px;
 }
 
+.initial-save-notice {
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: #f3faf4;
+  border: 1px solid rgba(34, 120, 60, 0.18);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #1f5c33;
+}
+
+.initial-count-note {
+  margin-top: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+#initial-done-btn {
+  margin-top: 8px;
+}
+
 .history-item--initial .history-item-sub--initial {
   color: var(--primary-hover);
   font-weight: 600;

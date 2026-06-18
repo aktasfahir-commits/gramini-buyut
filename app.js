@@ -1554,10 +1554,45 @@ function setInitialFormPurity(purity) {
   });
 }
 
+function initialRecordCount() {
+  return data.records.filter(isInitialRecord).length;
+}
+
+function resetInitialAddForm() {
+  initialFormPurity = '24';
+  setInitialFormAsset('gold');
+  document.getElementById('initial-grams-input').value = '';
+}
+
+function updateInitialModalMeta() {
+  const isEdit = Boolean(editInitialId);
+  const notice = document.getElementById('initial-save-notice');
+  const countNote = document.getElementById('initial-count-note');
+  const doneBtn = document.getElementById('initial-done-btn');
+  const count = initialRecordCount();
+
+  if (isEdit) {
+    notice.classList.add('hidden');
+    countNote.classList.add('hidden');
+    doneBtn.classList.add('hidden');
+    return;
+  }
+
+  if (count > 0) {
+    countNote.textContent = `Toplam ${count} başlangıç birikimi kaydın var.`;
+    countNote.classList.remove('hidden');
+    doneBtn.classList.remove('hidden');
+  } else {
+    countNote.classList.add('hidden');
+    doneBtn.classList.add('hidden');
+  }
+}
+
 function openInitialModal(editId = null) {
   editInitialId = editId;
   const form = document.getElementById('initial-form');
   form.reset();
+  document.getElementById('initial-save-notice').classList.add('hidden');
 
   if (editId) {
     const r = data.records.find((x) => x.id === editId);
@@ -1568,16 +1603,27 @@ function openInitialModal(editId = null) {
     document.getElementById('initial-grams-input').value = String(r.grams);
   } else {
     document.getElementById('initial-modal-title').textContent = 'Başlangıç Birikimi';
-    initialFormPurity = '24';
-    setInitialFormAsset('gold');
+    resetInitialAddForm();
   }
 
+  updateInitialModalMeta();
   document.getElementById('initial-overlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('initial-grams-input').focus(), 60);
 }
 
 function closeInitialModal() {
   editInitialId = null;
+  document.getElementById('initial-save-notice').classList.add('hidden');
   document.getElementById('initial-overlay').classList.add('hidden');
+}
+
+function finishInitialModal() {
+  closeInitialModal();
+  if (document.getElementById('history-view').classList.contains('hidden')) {
+    switchView('home');
+  } else {
+    renderHistory();
+  }
 }
 
 function submitInitialForm() {
@@ -1624,9 +1670,13 @@ function submitInitialForm() {
   data.records.push(record);
   silentMilestoneSync();
   dismissInitialHoldingsPrompt();
-  closeInitialModal();
-  switchView('home');
-  showToast('Başlangıç birikimi eklendi.');
+  renderGreeting();
+  renderHome();
+
+  document.getElementById('initial-save-notice').classList.remove('hidden');
+  updateInitialModalMeta();
+  resetInitialAddForm();
+  setTimeout(() => document.getElementById('initial-grams-input').focus(), 60);
 }
 
 /* ---------------- Silme ---------------- */
@@ -1935,6 +1985,7 @@ document.getElementById('initial-form').addEventListener('submit', (e) => {
   submitInitialForm();
 });
 document.getElementById('initial-cancel-btn').addEventListener('click', closeInitialModal);
+document.getElementById('initial-done-btn').addEventListener('click', finishInitialModal);
 document.getElementById('initial-overlay').addEventListener('click', (e) => {
   if (e.target.id === 'initial-overlay') closeInitialModal();
 });

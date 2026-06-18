@@ -1657,6 +1657,7 @@ function confirmDelete() {
 
 /* ---------------- Hoş geldin / uygulama hakkında ---------------- */
 let onboardingFromSettings = false;
+let pendingStartCardFocus = false;
 
 function maybeShowOnboarding() {
   if (data.settings.onboardingSeen) return;
@@ -1664,7 +1665,23 @@ function maybeShowOnboarding() {
   document.getElementById('onboarding-overlay').classList.remove('hidden');
 }
 
-function dismissOnboarding() {
+function focusStartCardSection() {
+  pendingStartCardFocus = false;
+  switchView('home');
+
+  const card = document.getElementById('start-card');
+  if (card.classList.contains('hidden')) return;
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.remove('start-card--focus');
+  // reflow ile animasyonu yeniden tetikle
+  void card.offsetWidth;
+  card.classList.add('start-card--focus');
+  setTimeout(() => card.classList.remove('start-card--focus'), 1400);
+}
+
+function dismissOnboarding(options = {}) {
+  const focusStartCard = options.focusStartCard === true;
   const fromSettings = onboardingFromSettings;
   onboardingFromSettings = false;
   if (!fromSettings && !data.settings.onboardingSeen) {
@@ -1672,7 +1689,11 @@ function dismissOnboarding() {
     saveData();
   }
   document.getElementById('onboarding-overlay').classList.add('hidden');
+  if (focusStartCard) pendingStartCardFocus = true;
   if (!fromSettings) maybeAskName();
+  if (focusStartCard && data.settings.nameAsked) {
+    setTimeout(focusStartCardSection, 80);
+  }
 }
 
 function openOnboarding() {
@@ -1696,6 +1717,7 @@ function submitName() {
   saveData();
   document.getElementById('name-overlay').classList.add('hidden');
   renderGreeting();
+  if (pendingStartCardFocus) setTimeout(focusStartCardSection, 80);
 }
 
 /* ---------------- Hedef ---------------- */
@@ -1925,8 +1947,8 @@ document.getElementById('initial-purity-segment').addEventListener('click', (e) 
   if (btn) setInitialFormPurity(btn.dataset.purity);
 });
 
-document.getElementById('onboarding-start-btn').addEventListener('click', dismissOnboarding);
-document.getElementById('onboarding-got-it-btn').addEventListener('click', dismissOnboarding);
+document.getElementById('onboarding-start-btn').addEventListener('click', () => dismissOnboarding({ focusStartCard: true }));
+document.getElementById('onboarding-got-it-btn').addEventListener('click', () => dismissOnboarding());
 document.getElementById('onboarding-overlay').addEventListener('click', (e) => {
   if (e.target.id === 'onboarding-overlay') dismissOnboarding();
 });

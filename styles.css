@@ -338,6 +338,15 @@ body {
   box-shadow: 0 2px 10px rgba(107, 83, 16, 0.18);
 }
 
+.start-card--focus {
+  animation: start-card-pulse 1.2s ease;
+}
+
+@keyframes start-card-pulse {
+  0%, 100% { box-shadow: var(--shadow); }
+  50% { box-shadow: 0 0 0 3px rgba(202, 161, 47, 0.45), var(--shadow-hover); }
+}
+
 .text-link-btn {
   background: none;
   border: none;

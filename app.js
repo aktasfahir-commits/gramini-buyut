@@ -134,6 +134,95 @@ function getMotivationPool() {
   return pool;
 }
 
+/* ---------------- İlham Kartları V1 ---------------- */
+let lastInspirationCardId = null;
+
+function getInspirationAudienceTags() {
+  const gold = totalGrams('gold');
+  const silver = totalGrams('silver');
+  const tags = [];
+  if (data.goals.length > 0) tags.push('has-goal');
+  if (!data.records.some(isEntryRecord)) tags.push('no-records');
+  if (data.records.some(isInitialRecord)) tags.push('has-initial');
+  if (gold > silver && gold > 0) tags.push('gold-heavy');
+  if (silver > gold && silver > 0) tags.push('silver-heavy');
+  return tags;
+}
+
+function getInspirationCategoriesMap() {
+  if (typeof INSPIRATION_CATEGORIES !== 'undefined') return INSPIRATION_CATEGORIES;
+  if (typeof window !== 'undefined' && window.INSPIRATION_CATEGORIES) return window.INSPIRATION_CATEGORIES;
+  return {};
+}
+
+function getInspirationPool() {
+  // V1: tüm havuz. V2: audience etiketlerine göre filtreleme burada yapılacak.
+  if (typeof INSPIRATION_CARDS !== 'undefined' && Array.isArray(INSPIRATION_CARDS)) {
+    return INSPIRATION_CARDS;
+  }
+  if (typeof window !== 'undefined' && Array.isArray(window.INSPIRATION_CARDS)) {
+    return window.INSPIRATION_CARDS;
+  }
+  return [];
+}
+
+function inspirationCardsReady() {
+  return getInspirationPool().length > 0;
+}
+
+function pickInspirationCard(excludeId = null) {
+  const pool = getInspirationPool();
+  if (!pool.length) return null;
+  let candidates = pool.filter((c) => c.id !== excludeId);
+  if (!candidates.length) candidates = pool;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function renderInspirationCard(card) {
+  if (!card) return;
+  const categories = getInspirationCategoriesMap();
+  const cat = categories[card.category];
+  document.getElementById('inspiration-category').textContent =
+    cat ? `${cat.emoji} ${cat.label}` : '';
+  document.getElementById('inspiration-text').textContent = card.text;
+}
+
+function showInspirationCard(card) {
+  if (!card) return;
+  lastInspirationCardId = card.id;
+  renderInspirationCard(card);
+}
+
+function nextInspirationCard() {
+  if (!inspirationCardsReady()) return;
+  const card = pickInspirationCard(lastInspirationCardId);
+  if (card) showInspirationCard(card);
+}
+
+function openInspirationModal() {
+  if (!inspirationCardsReady()) {
+    showToast('İlham kartları yüklenemedi. Sayfayı yenileyin.');
+    return;
+  }
+  const card = pickInspirationCard();
+  if (!card) return;
+  showInspirationCard(card);
+  document.getElementById('inspiration-overlay')?.classList.remove('hidden');
+}
+
+function closeInspirationModal() {
+  document.getElementById('inspiration-overlay')?.classList.add('hidden');
+}
+
+function bindInspirationEvents() {
+  document.getElementById('open-inspiration-btn')?.addEventListener('click', openInspirationModal);
+  document.getElementById('inspiration-next-btn')?.addEventListener('click', nextInspirationCard);
+  document.getElementById('inspiration-close-btn')?.addEventListener('click', closeInspirationModal);
+  document.getElementById('inspiration-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'inspiration-overlay') closeInspirationModal();
+  });
+}
+
 /* ---------------- Fiyat / tahmini değer ---------------- */
 // Ana ekranda asla TL gösterilmez. Tahmini değer yalnızca "Toplam Birikimim" ekranında,
 // kullanıcı toggle açarsa görünür. Kaynak: marketFeed (data/market.json satış fiyatları).
@@ -1928,11 +2017,12 @@ document.getElementById('market-refresh-btn')?.addEventListener('click', (e) => 
   e.preventDefault();
   refreshMarketFeed();
 });
-document.getElementById('history-records-toggle').addEventListener('click', toggleHistoryRecords);
-document.getElementById('edit-initial-records-btn').addEventListener('click', openInitialRecordsForEdit);
-document.getElementById('open-add-btn').addEventListener('click', openAddForm);
-document.getElementById('open-history-btn').addEventListener('click', () => switchView('history'));
-document.getElementById('open-onboarding-btn').addEventListener('click', openOnboarding);
+document.getElementById('history-records-toggle')?.addEventListener('click', toggleHistoryRecords);
+document.getElementById('edit-initial-records-btn')?.addEventListener('click', openInitialRecordsForEdit);
+document.getElementById('open-add-btn')?.addEventListener('click', openAddForm);
+document.getElementById('open-history-btn')?.addEventListener('click', () => switchView('history'));
+document.getElementById('open-onboarding-btn')?.addEventListener('click', openOnboarding);
+bindInspirationEvents();
 document.getElementById('start-card-initial-btn').addEventListener('click', () => openInitialModal());
 document.getElementById('start-card-first-gram-btn').addEventListener('click', openAddForm);
 document.getElementById('add-back-btn').addEventListener('click', () => switchView('home'));
@@ -2023,11 +2113,11 @@ document.getElementById('initial-purity-segment').addEventListener('click', (e) 
 
 document.getElementById('onboarding-start-btn').addEventListener('click', () => dismissOnboarding({ focusStartCard: true }));
 document.getElementById('onboarding-got-it-btn').addEventListener('click', () => dismissOnboarding());
-document.getElementById('onboarding-overlay').addEventListener('click', (e) => {
+document.getElementById('onboarding-overlay')?.addEventListener('click', (e) => {
   if (e.target.id === 'onboarding-overlay') dismissOnboarding();
 });
 
-document.getElementById('celebrate-close').addEventListener('click', closeCelebration);
+document.getElementById('celebrate-close')?.addEventListener('click', closeCelebration);
 document.getElementById('delete-cancel').addEventListener('click', closeDeleteModal);
 document.getElementById('delete-confirm').addEventListener('click', confirmDelete);
 document.getElementById('delete-overlay').addEventListener('click', (e) => {

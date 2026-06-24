@@ -1,0 +1,131 @@
+/* Gramını Büyüt — İlham Kartları V1
+   tone: sakin | dusunduren | carpici | muzip
+   audience: V2 için — has-goal | no-records | has-initial | gold-heavy | silver-heavy */
+
+const INSPIRATION_CATEGORIES = {
+  'kucuk-harcama': { emoji: '☕', label: 'Küçük Harcamalar' },
+  sabir: { emoji: '🌱', label: 'Sabır' },
+  gelecek: { emoji: '🏡', label: 'Gelecek' },
+  birikim: { emoji: '🥇', label: 'Birikim' },
+  disiplin: { emoji: '💪', label: 'Disiplin' },
+  gulumseten: { emoji: '😏', label: 'Gülümseten' },
+};
+
+const INSPIRATION_CARDS = [
+  // ☕ Küçük Harcamalar (17)
+  { id: 'insp-001', category: 'kucuk-harcama', tone: 'muzip', text: 'Bugün içmediğin bir kahve,\nyarın sana ait bir gram olabilir.', audience: [] },
+  { id: 'insp-002', category: 'kucuk-harcama', tone: 'muzip', text: 'Paket servis bir gün, külçe gümüş başka bir gün.\nİkisi de hayat; biri anlık, biri kalıcı.', audience: [] },
+  { id: 'insp-003', category: 'kucuk-harcama', tone: 'muzip', text: 'Üçüncü kahveyi içmeden önce dur.\nBelki o gram seni daha uzun taşır.', audience: [] },
+  { id: 'insp-004', category: 'kucuk-harcama', tone: 'muzip', text: 'Sepetteki küçük ekstralar sessizce büyür.\nGram da sessizce büyür — fark şu: gram seninle kalır.', audience: [] },
+  { id: 'insp-005', category: 'kucuk-harcama', tone: 'muzip', text: 'Canın tatlı çekiyorsa, bir dilim yerine bir düşünce biriktir.\nTat geçer, gram kalır.', audience: [] },
+  { id: 'insp-006', category: 'kucuk-harcama', tone: 'sakin', text: 'Her gün küçük bir lüks mü?\nHer ay küçük bir gram da olabilir.', audience: [] },
+  { id: 'insp-007', category: 'kucuk-harcama', tone: 'sakin', text: 'Küçük harcamalar kötü değil.\nAma küçük birikimler de küçük değildir.', audience: [] },
+  { id: 'insp-008', category: 'kucuk-harcama', tone: 'sakin', text: 'Bir fincan kahve keyif verir.\nBir gram birikim huzur verir.', audience: [] },
+  { id: 'insp-009', category: 'kucuk-harcama', tone: 'sakin', text: 'Hayatın tadını çıkar.\nGeleceğine de küçük bir pay bırak.', audience: [] },
+  { id: 'insp-010', category: 'kucuk-harcama', tone: 'sakin', text: 'Günlük küçük seçimler, yıllık büyük fark yaratır.', audience: [] },
+  { id: 'insp-011', category: 'kucuk-harcama', tone: 'sakin', text: 'Her şeyi kesmek zorunda değilsin.\nSadece bir şeyi bilinçli seç.', audience: [] },
+  { id: 'insp-012', category: 'kucuk-harcama', tone: 'sakin', text: 'Bugünkü küçük fedakârlık,\nyarının sakin gülümsemesi olabilir.', audience: [] },
+  { id: 'insp-013', category: 'kucuk-harcama', tone: 'carpici', text: 'Cebinden çıkan her küçük para bir yere gider.\nSen nereye gittiğine karar ver.', audience: [] },
+  { id: 'insp-014', category: 'kucuk-harcama', tone: 'carpici', text: 'İki lira değmez sanırsın.\nYüz kere iki lira, bir gram eder.', audience: [] },
+  { id: 'insp-015', category: 'kucuk-harcama', tone: 'carpici', text: 'Küçük harcamalar gürültülüdür.\nKüçük birikimler sessizdir — ama kalıcıdır.', audience: [] },
+  { id: 'insp-016', category: 'kucuk-harcama', tone: 'dusunduren', text: 'Bir gün harcadığın parayı hatırlamazsın.\nBiriktirdiğin gramı unutmazsın.', audience: [] },
+  { id: 'insp-017', category: 'kucuk-harcama', tone: 'dusunduren', text: 'Denge kurmak, hiçbir şey yapmamaktan iyidir.', audience: [] },
+
+  // 🌱 Sabır (17)
+  { id: 'insp-018', category: 'sabir', tone: 'sakin', text: 'Tohum toprağa düştüğü gün ağaç olmaz.', audience: [] },
+  { id: 'insp-019', category: 'sabir', tone: 'sakin', text: 'Altın da gümüş de sabrı sever.', audience: [] },
+  { id: 'insp-020', category: 'sabir', tone: 'sakin', text: 'Biriktirmek acele işi değil;\nsürdürülebilir alışkanlık işi.', audience: [] },
+  { id: 'insp-021', category: 'sabir', tone: 'sakin', text: 'Sabır, fiziksel birikimin en güvenilir yol arkadaşıdır.', audience: [] },
+  { id: 'insp-022', category: 'sabir', tone: 'sakin', text: 'Yavaş büyüyen şeyler genelde sağlam kalır.', audience: [] },
+  { id: 'insp-023', category: 'sabir', tone: 'sakin', text: 'Her gün bir adım.\nHer ay bir iz.\nHer yıl bir fark.', audience: [] },
+  { id: 'insp-024', category: 'sabir', tone: 'sakin', text: 'Küçük ama düzenli.\nGerçek birikim böyle büyür.', audience: [] },
+  { id: 'insp-025', category: 'sabir', tone: 'sakin', text: 'Bugün görünmeyen emek,\nyarın görünür birikim olur.', audience: [] },
+  { id: 'insp-026', category: 'sabir', tone: 'sakin', text: 'Rush yok.\nAcele yok.\nSadece devam.', audience: [] },
+  { id: 'insp-027', category: 'sabir', tone: 'sakin', text: 'Zaman geçer, gram kalır.\nSabır da öyle.', audience: [] },
+  { id: 'insp-028', category: 'sabir', tone: 'dusunduren', text: 'En zor gün, başlamadan önceki gündür.\nBaşladıktan sonra sadece devam edersin.', audience: ['no-records'] },
+  { id: 'insp-029', category: 'sabir', tone: 'dusunduren', text: 'Beklemek pasif değildir.\nBilinçli biriktirmek sabırdır.', audience: [] },
+  { id: 'insp-030', category: 'sabir', tone: 'dusunduren', text: 'Ağaç kök salmadan meyve vermez.\nBirikim de öyle.', audience: [] },
+  { id: 'insp-031', category: 'sabir', tone: 'dusunduren', text: 'Hızlı parlayan şeyler hızlı söner.\nGram gram büyüyen şey kalır.', audience: [] },
+  { id: 'insp-032', category: 'sabir', tone: 'dusunduren', text: 'Sabır, geleceğe güvenmenin sessiz hali.', audience: [] },
+  { id: 'insp-033', category: 'sabir', tone: 'carpici', text: 'Düzenli olmak sıkıcı görünebilir.\nAma düzensizlik pahalıya patlar.', audience: [] },
+  { id: 'insp-034', category: 'sabir', tone: 'carpici', text: 'Herkes hızlı sonuç ister.\nAz kişi küçük adım atar.', audience: [] },
+
+  // 🏡 Gelecek (17)
+  { id: 'insp-035', category: 'gelecek', tone: 'dusunduren', text: 'Gelecek bir gün gelecek.\nBunu da unutma.', audience: [] },
+  { id: 'insp-036', category: 'gelecek', tone: 'dusunduren', text: 'Belki bir gün bahçeli evinin ilk tuğlası bugünkü gramdır.', audience: ['has-goal'] },
+  { id: 'insp-037', category: 'gelecek', tone: 'dusunduren', text: 'Bugün gelecekteki kendine küçük bir hediye bırak.', audience: [] },
+  { id: 'insp-038', category: 'gelecek', tone: 'dusunduren', text: 'Gramını büyütmek, gelecekteki kendine selam göndermektir.', audience: [] },
+  { id: 'insp-039', category: 'gelecek', tone: 'dusunduren', text: 'Bir gün bugünkü gramına teşekkür edeceksin.', audience: [] },
+  { id: 'insp-040', category: 'gelecek', tone: 'dusunduren', text: 'Geleceğin bugün attığın gram kadar güçlü olur.', audience: [] },
+  { id: 'insp-041', category: 'gelecek', tone: 'dusunduren', text: 'Hayatı yaşa.\nGeleceğini de unutma.', audience: [] },
+  { id: 'insp-042', category: 'gelecek', tone: 'dusunduren', text: 'Tohumlar fidana, gramlar eve, arabaya, tatile dönmeli.', audience: [] },
+  { id: 'insp-043', category: 'gelecek', tone: 'carpici', text: 'Gelecek bir gün diye ertelenmez;\ngram gram kurulur.', audience: [] },
+  { id: 'insp-044', category: 'gelecek', tone: 'carpici', text: 'Bugünün küçük gramı,\nyarının büyük rahatlığı olabilir.', audience: [] },
+  { id: 'insp-045', category: 'gelecek', tone: 'carpici', text: 'Geleceğine dokunuyorsan,\nzaten doğru yoldasın.', audience: [] },
+  { id: 'insp-046', category: 'gelecek', tone: 'carpici', text: 'Uzun vadede en büyük konfor\nküçük düzenlerle başlar.', audience: [] },
+  { id: 'insp-047', category: 'gelecek', tone: 'carpici', text: 'Yarın seni bekleyen bir gram,\nbugün senin kararın.', audience: [] },
+  { id: 'insp-048', category: 'gelecek', tone: 'sakin', text: 'Gelecek endişe değil;\nbugünkü küçük adımların toplamı.', audience: [] },
+  { id: 'insp-049', category: 'gelecek', tone: 'sakin', text: 'Hayatı yaşa ama gelecek bir gün gelecek,\nbunu da unutma.', audience: [] },
+  { id: 'insp-050', category: 'gelecek', tone: 'sakin', text: 'Bugün ekersen,\nyarın hasat edersin — gram gram.', audience: [] },
+  { id: 'insp-051', category: 'gelecek', tone: 'sakin', text: 'Gelecekteki sen,\nbugünkü senin küçük kararlarına güvenir.', audience: [] },
+
+  // 🥇 Birikim (17)
+  { id: 'insp-052', category: 'birikim', tone: 'sakin', text: 'Bugün az olabilir ama az, yoktan çoktur.', audience: [] },
+  { id: 'insp-053', category: 'birikim', tone: 'sakin', text: 'Dokunuyorsan senindir.', audience: [] },
+  { id: 'insp-054', category: 'birikim', tone: 'sakin', text: 'Fiyatlar değişir. Gramlar kalır.', audience: [] },
+  { id: 'insp-055', category: 'birikim', tone: 'sakin', text: 'Bir gram küçük görünebilir.\nAma sıfırdan büyüktür.', audience: ['no-records'] },
+  { id: 'insp-056', category: 'birikim', tone: 'sakin', text: 'Her gram, kendi yolculuğunun bir parçası.', audience: [] },
+  { id: 'insp-057', category: 'birikim', tone: 'sakin', text: 'Gösteriş değil, gerçek birikim.\nGram gram.', audience: [] },
+  { id: 'insp-058', category: 'birikim', tone: 'dusunduren', text: 'Bir gram altın kimseyi zengin etmez.\nAma sıfır gram hiç etmez.', audience: [] },
+  { id: 'insp-059', category: 'birikim', tone: 'dusunduren', text: 'Gram gram büyüyen şey\nsadece birikimin değil, özgüvenin de.', audience: [] },
+  { id: 'insp-060', category: 'birikim', tone: 'dusunduren', text: 'Altın ve gümüş kalıcı birikimin sessiz taşlarıdır.', audience: [] },
+  { id: 'insp-061', category: 'birikim', tone: 'dusunduren', text: 'Başladığın yer sıfır değil.\nBu büyük avantaj.', audience: ['has-initial'] },
+  { id: 'insp-062', category: 'birikim', tone: 'dusunduren', text: 'Sıfırdan değil, kendi temelinden büyüyorsun.', audience: ['has-initial'] },
+  { id: 'insp-063', category: 'birikim', tone: 'carpici', text: 'Büyük birikimler büyük maaşlarla değil,\ndüzenli alışkanlıklarla oluşur.', audience: [] },
+  { id: 'insp-064', category: 'birikim', tone: 'carpici', text: 'Bir gün başlayacağım diyenler çoktur.\nBaşlayanlar azdır.', audience: ['no-records'] },
+  { id: 'insp-065', category: 'birikim', tone: 'carpici', text: 'Küçük adımlar büyük hedefleri taşır.', audience: ['has-goal'] },
+  { id: 'insp-066', category: 'birikim', tone: 'carpici', text: 'Elinde tuttuğun gram,\nekrandaki rakamdan daha gerçektir.', audience: [] },
+  { id: 'insp-067', category: 'birikim', tone: 'carpici', text: 'Birikim konuşmaz.\nAma orada olduğunu hissettirir.', audience: [] },
+  { id: 'insp-068', category: 'birikim', tone: 'carpici', text: 'Gerçek birikim,\ngösterişten sessiz kalır.', audience: [] },
+
+  // 💪 Disiplin (16)
+  { id: 'insp-069', category: 'disiplin', tone: 'carpici', text: 'Motivasyon gelir gider.\nDisiplin kalır.', audience: [] },
+  { id: 'insp-070', category: 'disiplin', tone: 'carpici', text: 'Kendine söz ver.\nGram tut.', audience: [] },
+  { id: 'insp-071', category: 'disiplin', tone: 'carpici', text: 'Her ay küçük bir adım,\nyılda on iki adım demek.', audience: [] },
+  { id: 'insp-072', category: 'disiplin', tone: 'carpici', text: 'Kolay günlerde biriktirmek güzel.\nZor günlerde biriktirmek güçlü.', audience: [] },
+  { id: 'insp-073', category: 'disiplin', tone: 'carpici', text: 'Alışkanlık, karar vermeyi azaltır.\nAzaltılan karar, azaltılan yorgunluk demek.', audience: [] },
+  { id: 'insp-074', category: 'disiplin', tone: 'carpici', text: 'Bugün yaptığın küçük şey,\nyarın yapmana gerek kalmaz.', audience: [] },
+  { id: 'insp-075', category: 'disiplin', tone: 'carpici', text: 'Düzenli olmak,\ngeleceğe saygı duymaktır.', audience: [] },
+  { id: 'insp-076', category: 'disiplin', tone: 'dusunduren', text: 'Hedefin seni baskılamasın;\nyolculuğunu göstersin.', audience: ['has-goal'] },
+  { id: 'insp-077', category: 'disiplin', tone: 'dusunduren', text: 'Ölçülebilir hedefler,\nküçük adımları değerli kılar.', audience: ['has-goal'] },
+  { id: 'insp-078', category: 'disiplin', tone: 'dusunduren', text: 'Harcamak kötü değil;\ndengeyle biriktirmek güzeldir.', audience: [] },
+  { id: 'insp-079', category: 'disiplin', tone: 'dusunduren', text: 'Kendine karşı dürüst ol.\nGram da dürüst olsun.', audience: [] },
+  { id: 'insp-080', category: 'disiplin', tone: 'dusunduren', text: 'Bugün kaydetmezsen,\nyarın hatırlamazsın.', audience: [] },
+  { id: 'insp-081', category: 'disiplin', tone: 'sakin', text: 'Her kayıt, kendine verdiğin küçük bir söz.', audience: [] },
+  { id: 'insp-082', category: 'disiplin', tone: 'sakin', text: 'Ritim bozulsa da geri dönebilirsin.\nÖnemli olan tamamen bırakmamak.', audience: [] },
+  { id: 'insp-083', category: 'disiplin', tone: 'sakin', text: 'Birikim ritmi mükemmel olmak zorunda değil.\nDevam etmek yeter.', audience: [] },
+  { id: 'insp-084', category: 'disiplin', tone: 'sakin', text: 'Küçük düzen, büyük huzur getirir.', audience: [] },
+
+  // 😏 Gülümseten (16)
+  { id: 'insp-085', category: 'gulumseten', tone: 'muzip', text: 'Kahvene para harca.\nAma unutma, gram altın daha lezzetli.', audience: [] },
+  { id: 'insp-086', category: 'gulumseten', tone: 'muzip', text: 'Cüzdanın hafiflesin istemezsin.\nAma gramın ağırlaşsın istersin.', audience: [] },
+  { id: 'insp-087', category: 'gulumseten', tone: 'muzip', text: 'Telefonun eskir, gramın eskimez.\nİkisi de ağırlık taşır — biri seni, biri seninle.', audience: [] },
+  { id: 'insp-088', category: 'gulumseten', tone: 'muzip', text: 'Story atmadan da birikim yapılır.\nHatta sessizce daha güzel olur.', audience: [] },
+  { id: 'insp-089', category: 'gulumseten', tone: 'muzip', text: 'Bir gram altın, bir gram gümüş.\nİkisi de senin — üçüncüsü merak değil.', audience: [] },
+  { id: 'insp-090', category: 'gulumseten', tone: 'muzip', text: 'Külçe gümüş soğuk durur.\nAma elinde sıcak hissettirir.', audience: ['silver-heavy'] },
+  { id: 'insp-091', category: 'gulumseten', tone: 'muzip', text: 'Altın parlamaz diye mi biriktirirsin?\nParlasın diye değil — senin olsun diye.', audience: ['gold-heavy'] },
+  { id: 'insp-092', category: 'gulumseten', tone: 'muzip', text: 'Birikim yapmak sıkıcı mı?\nSıfır gram daha sıkıcı.', audience: [] },
+  { id: 'insp-093', category: 'gulumseten', tone: 'muzip', text: 'Yarın diyenler çok.\nBugün gram ekleyen az.', audience: [] },
+  { id: 'insp-094', category: 'gulumseten', tone: 'muzip', text: 'Hedef koydun, gram ekledin.\nŞimdi sadece devam — dram yok.', audience: ['has-goal'] },
+  { id: 'insp-095', category: 'gulumseten', tone: 'carpici', text: 'Herkes konuşur.\nAz kişi gram tutar.', audience: [] },
+  { id: 'insp-096', category: 'gulumseten', tone: 'carpici', text: 'Sessiz birikim,\ngürültülü gösterişten daha ağır basar.', audience: [] },
+  { id: 'insp-097', category: 'gulumseten', tone: 'sakin', text: 'Gülümse.\nBugün de bir gram daha yakınsın — belki.', audience: [] },
+  { id: 'insp-098', category: 'gulumseten', tone: 'sakin', text: 'Hayat kısa.\nAma gramın uzun kalır.', audience: [] },
+  { id: 'insp-099', category: 'gulumseten', tone: 'sakin', text: 'Kendine gülümse.\nKüçük adımlar da adımdır.', audience: [] },
+  { id: 'insp-100', category: 'gulumseten', tone: 'sakin', text: 'Birikim ciddi bir iş.\nAma ciddiyeti gülümseyerek taşıyabilirsin.', audience: [] },
+];
+
+if (typeof window !== 'undefined') {
+  window.INSPIRATION_CATEGORIES = INSPIRATION_CATEGORIES;
+  window.INSPIRATION_CARDS = INSPIRATION_CARDS;
+}

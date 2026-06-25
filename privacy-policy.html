@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#caa12f">
+  <meta name="description" content="Gramını Büyüt uygulaması gizlilik politikası.">
+  <title>Gizlilik Politikası – Gramını Büyüt</title>
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf7f0;
+      --surface: #ffffff;
+      --border: rgba(40, 30, 0, 0.08);
+      --text: #23201a;
+      --text-muted: #7a7468;
+      --primary: #caa12f;
+      --primary-hover: #b08e22;
+      --gold-from: #d4af37;
+      --gold-to: #f4cf5b;
+      --gold-ink: #6b5310;
+      --radius: 18px;
+      --shadow: 0 2px 14px rgba(60, 45, 0, 0.07);
+      --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 28px 20px calc(40px + env(safe-area-inset-bottom));
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .brand-logo {
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      font-size: 1.4rem;
+      background: linear-gradient(135deg, var(--gold-from), var(--gold-to));
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .brand-tagline {
+      color: var(--primary-hover);
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 22px;
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      color: var(--gold-ink);
+    }
+
+    .updated {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
+
+    p {
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin: 24px 0 10px;
+      color: var(--primary-hover);
+    }
+
+    h2:first-of-type {
+      margin-top: 6px;
+    }
+
+    ul {
+      margin: 0 0 14px 1.1rem;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    a {
+      color: var(--primary-hover);
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    a:hover { color: var(--primary); }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 24px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--primary-hover);
+      text-decoration: none;
+    }
+
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="brand">
+      <span class="brand-logo" aria-hidden="true">🌱</span>
+      <div>
+        <p class="brand-title">Gramını Büyüt</p>
+        <p class="brand-tagline">Dokunuyorsan Senindir.</p>
+      </div>
+    </header>
+
+    <main class="card">
+      <h1>Gramını Büyüt – Gizlilik Politikası</h1>
+      <p class="updated">Son Güncelleme: 24 Haziran 2026</p>
+
+      <p>Gramını Büyüt olarak kullanıcılarımızın gizliliğine önem veriyoruz.</p>
+      <p>Bu uygulama, fiziksel altın ve gümüş birikimlerinizi takip etmenize yardımcı olmak amacıyla geliştirilmiştir.</p>
+
+      <h2>Toplanan Veriler</h2>
+      <p>Gramını Büyüt;</p>
+      <ul>
+        <li>Hesap oluşturmaz.</li>
+        <li>Ad, soyad veya kimlik bilgisi istemez.</li>
+        <li>E-posta adresi toplamaz.</li>
+        <li>Konum bilgisi toplamaz.</li>
+        <li>Kamera veya mikrofon erişimi istemez.</li>
+        <li>Rehber veya fotoğraflarınıza erişmez.</li>
+      </ul>
+
+      <h2>Verilerin Saklanması</h2>
+      <p>Uygulamaya girdiğiniz bilgiler yalnızca kendi cihazınızda saklanır.</p>
+      <p>Bu bilgiler herhangi bir sunucuya gönderilmez.</p>
+
+      <h2>Üçüncü Taraf Hizmetler</h2>
+      <p>Gramını Büyüt, kullanıcı verilerini üçüncü taraf şirketlerle paylaşmaz veya satmaz.</p>
+
+      <h2>İnternet Bağlantısı</h2>
+      <p>Uygulama temel işlevlerini internet bağlantısı olmadan da kullanabilir.</p>
+      <p>İnternet bağlantısı yalnızca piyasa verilerinin güncellenmesi gibi belirli özelliklerde kullanılabilir.</p>
+
+      <h2>Çocukların Gizliliği</h2>
+      <p>Gramını Büyüt özellikle çocuklara yönelik bir uygulama değildir ve bilerek çocuklardan kişisel veri toplamaz.</p>
+
+      <h2>Gizlilik Politikasındaki Değişiklikler</h2>
+      <p>Bu politika zaman zaman güncellenebilir.</p>
+      <p>Güncellemeler bu sayfada yayımlanır.</p>
+
+      <h2>İletişim</h2>
+      <p>Herhangi bir sorunuz veya geri bildiriminiz için:</p>
+      <p><a href="mailto:bilbenajans@gmail.com">bilbenajans@gmail.com</a></p>
+    </main>
+
+    <a class="back-link" href="./index.html">← Uygulamaya dön</a>
+  </div>
+</body>
+</html>

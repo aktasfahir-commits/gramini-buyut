@@ -1,15 +1,33 @@
 {
-  "gold": {
-    "buyTRY": 6216.03,
-    "sellTRY": 6280.75,
-    "label": "Dünya Katılım referans kuru"
-  },
-  "silver": {
-    "buyTRY": 100.76,
-    "sellTRY": 102.28,
-    "label": "Dünya Katılım referans kuru"
-  },
   "updatedAt": "2026-06-14T11:18:13.231Z",
   "source": "auto",
-  "status": "ok"
+  "status": "ok",
+  "sources": {
+    "participation": {
+      "label": "Katılım",
+      "gold": {
+        "buy": 6216.03,
+        "sell": 6280.75,
+        "changePercent": null
+      },
+      "silver": {
+        "buy": 100.76,
+        "sell": 102.28,
+        "changePercent": null
+      }
+    },
+    "freeMarket": {
+      "label": "Serbest Piyasa",
+      "gold": {
+        "buy": 6032.5,
+        "sell": 6032.88,
+        "changePercent": 0.17
+      },
+      "silver": {
+        "buy": 85.9,
+        "sell": 86.16,
+        "changePercent": -0.5
+      }
+    }
+  }
 }

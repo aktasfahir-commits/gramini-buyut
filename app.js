@@ -224,9 +224,8 @@ function bindInspirationEvents() {
 }
 
 /* ---------------- Fiyat / tahmini değer ---------------- */
-// Ana ekranda asla TL gösterilmez. Tahmini değer yalnızca "Toplam Birikimim" ekranında,
-// kullanıcı toggle açarsa görünür. Kaynak: marketFeed (data/market.json satış fiyatları).
-// priceState: eski localStorage şeması uyumluluğu için saklanır; tahmin hesabında kullanılmaz.
+// Tahmini TL değeri yalnızca kullanıcı toggle açarsa görünür (Toplam Birikimim + ana altın/gümüş kartları).
+// Kaynak: seçili marketFeed kaynağının satış fiyatları (data/market.json).
 const DEFAULT_PRICE_STATE = {
   gold24BuyPricePerGramTRY: null,
   gold22BuyPricePerGramTRY: null,
@@ -235,24 +234,47 @@ const DEFAULT_PRICE_STATE = {
   updatedAt: null,
 };
 
-/* ---------------- Günlük Piyasa (ana ekran bilgi kartı + tahmini değer) ---------------- */
+/* ---------------- Günlük Piyasa (canlı kart + tahmini değer) ---------------- */
 // Veri kaynağı: data/market.json (GitHub Actions → scripts/update-market.js)
-// TODO: Günlük Piyasa kartı kullanıcı tarafından gizlenebilir yapılacak.
+const MARKET_SOURCE_IDS = ['participation', 'freeMarket'];
+const DEFAULT_MARKET_SOURCE = 'participation';
+const MARKET_SOURCE_LABELS = {
+  participation: 'Katılım',
+  freeMarket: 'Serbest Piyasa',
+};
+
 const EMPTY_MARKET_METAL = {
-  buyTRY: null,
-  sellTRY: null,
+  buy: null,
+  sell: null,
+  changePercent: null,
   label: null,
 };
 
-const EMPTY_MARKET_FEED = {
+const EMPTY_MARKET_SOURCE = {
+  label: null,
   gold: { ...EMPTY_MARKET_METAL },
   silver: { ...EMPTY_MARKET_METAL },
+};
+
+const EMPTY_MARKET_FEED = {
   updatedAt: null,
   source: 'auto',
   status: 'empty',
+  sources: {
+    participation: {
+      label: MARKET_SOURCE_LABELS.participation,
+      gold: { ...EMPTY_MARKET_METAL },
+      silver: { ...EMPTY_MARKET_METAL },
+    },
+    freeMarket: {
+      label: MARKET_SOURCE_LABELS.freeMarket,
+      gold: { ...EMPTY_MARKET_METAL },
+      silver: { ...EMPTY_MARKET_METAL },
+    },
+  },
 };
 
-let marketFeed = { ...EMPTY_MARKET_FEED, gold: { ...EMPTY_MARKET_FEED.gold }, silver: { ...EMPTY_MARKET_FEED.silver } };
+let marketFeed = JSON.parse(JSON.stringify(EMPTY_MARKET_FEED));
 /* ---------------- State ---------------- */
 // Tam v2 şeması ile boş veri üretir (her sıfırlamada aynı eksiksiz şekil).
 function emptyData() {
@@ -260,7 +282,14 @@ function emptyData() {
     version: DATA_VERSION,
     records: [],
     goals: [],
-    settings: { showEstimatedValue: false, name: null, nameAsked: false, initialHoldingsPromptDismissed: false, onboardingSeen: false },
+    settings: {
+      showEstimatedValue: false,
+      marketSource: DEFAULT_MARKET_SOURCE,
+      name: null,
+      nameAsked: false,
+      initialHoldingsPromptDismissed: false,
+      onboardingSeen: false,
+    },
     priceState: { ...DEFAULT_PRICE_STATE },
     achievements: emptyAchievements(),
   };
@@ -596,9 +625,13 @@ function milestoneEmoji(milestone) {
 function normalizeSettings(s) {
   const src = s && typeof s === 'object' ? s : {};
   const name = typeof src.name === 'string' && src.name.trim() ? src.name.trim() : null;
+  const marketSource = MARKET_SOURCE_IDS.includes(src.marketSource)
+    ? src.marketSource
+    : DEFAULT_MARKET_SOURCE;
   return {
     ...src,
     showEstimatedValue: src.showEstimatedValue === true,
+    marketSource,
     name,
     nameAsked: src.nameAsked === true,
     initialHoldingsPromptDismissed: src.initialHoldingsPromptDismissed === true,
@@ -797,9 +830,36 @@ const GOLD_PURITY_VALUE_RATIO = {
   '14': 14 / 24,
 };
 
+function getSelectedMarketSourceId() {
+  const id = data?.settings?.marketSource;
+  return MARKET_SOURCE_IDS.includes(id) ? id : DEFAULT_MARKET_SOURCE;
+}
+
+function getMarketSource(sourceId) {
+  const id = MARKET_SOURCE_IDS.includes(sourceId) ? sourceId : DEFAULT_MARKET_SOURCE;
+  return marketFeed.sources?.[id] || null;
+}
+
+function getActiveMarketSource() {
+  return getMarketSource(getSelectedMarketSourceId());
+}
+
 function marketSellPricePerGram(assetType) {
-  const metal = marketFeed[assetType];
-  return normalizeMarketPrice(metal?.sellTRY);
+  const source = getActiveMarketSource();
+  const metal = source?.[assetType];
+  return normalizeMarketPrice(metal?.sell ?? metal?.sellTRY);
+}
+
+function setMarketSource(sourceId) {
+  if (!MARKET_SOURCE_IDS.includes(sourceId)) return;
+  if (data.settings.marketSource === sourceId) return;
+  data.settings.marketSource = sourceId;
+  saveData();
+  syncMarketSourcePicker();
+  renderLiveMarketCard();
+  renderMarketCard();
+  renderTotalCardEstimates();
+  renderEstimatePanel();
 }
 
 function estimateGoldValueTRY() {
@@ -831,8 +891,12 @@ function estimateSilverValueTRY() {
 }
 
 function formatEstimateAmount(est) {
-  if (!est.hasPrice) return 'Fiyat bilgisi alınamadı';
+  if (!est.hasPrice) return 'Tahmini değer hesaplanamadı';
   return formatTRY(est.value);
+}
+
+function formatCompactEstimateTRY(n) {
+  return `≈ ${formatTRY(n)}`;
 }
 
 function goldEstimateBreakdownHtml(breakdown) {
@@ -910,6 +974,9 @@ function renderHome() {
   renderJourney();
   renderGoalCard();
   renderMotivation();
+  syncMarketSourcePicker();
+  renderLiveMarketCard();
+  renderTotalCardEstimates();
   renderMarketCard();
 }
 
@@ -1070,37 +1137,116 @@ function formatMarketUpdatedAt(iso) {
   });
 }
 
+function formatMarketTimeShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function normalizeMarketPrice(n) {
   return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function parseMarketMetal(raw) {
+function normalizeMarketChangePercent(n) {
+  return typeof n === 'number' && Number.isFinite(n) ? n : null;
+}
+
+function normalizeMarketMetal(raw) {
   const metal = raw && typeof raw === 'object' ? raw : {};
   return {
-    buyTRY: normalizeMarketPrice(metal.buyTRY),
-    sellTRY: normalizeMarketPrice(metal.sellTRY),
+    buy: normalizeMarketPrice(metal.buy ?? metal.buyTRY),
+    sell: normalizeMarketPrice(metal.sell ?? metal.sellTRY),
+    changePercent: normalizeMarketChangePercent(metal.changePercent),
     label: typeof metal.label === 'string' && metal.label.trim() ? metal.label.trim() : null,
   };
 }
 
-function parseMarketFeed(raw) {
-  if (!raw || typeof raw !== 'object') return null;
+function normalizeMarketSourceBlock(raw, fallbackLabel) {
+  const src = raw && typeof raw === 'object' ? raw : {};
   return {
-    gold: parseMarketMetal(raw.gold),
-    silver: parseMarketMetal(raw.silver),
-    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
-    source: typeof raw.source === 'string' ? raw.source : 'auto',
-    status: typeof raw.status === 'string' ? raw.status : 'empty',
+    label: typeof src.label === 'string' && src.label.trim() ? src.label.trim() : fallbackLabel,
+    gold: normalizeMarketMetal(src.gold),
+    silver: normalizeMarketMetal(src.silver),
   };
 }
 
+function legacyMarketToSources(raw) {
+  return {
+    participation: normalizeMarketSourceBlock({
+      label: MARKET_SOURCE_LABELS.participation,
+      gold: raw.gold,
+      silver: raw.silver,
+    }, MARKET_SOURCE_LABELS.participation),
+    freeMarket: normalizeMarketSourceBlock(null, MARKET_SOURCE_LABELS.freeMarket),
+  };
+}
+
+function normalizeMarketFeed(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  let sources;
+  if (raw.sources && typeof raw.sources === 'object') {
+    sources = {
+      participation: normalizeMarketSourceBlock(
+        raw.sources.participation,
+        MARKET_SOURCE_LABELS.participation
+      ),
+      freeMarket: normalizeMarketSourceBlock(
+        raw.sources.freeMarket,
+        MARKET_SOURCE_LABELS.freeMarket
+      ),
+    };
+  } else if (raw.gold || raw.silver) {
+    sources = legacyMarketToSources(raw);
+  } else {
+    sources = JSON.parse(JSON.stringify(EMPTY_MARKET_FEED.sources));
+  }
+
+  return {
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
+    source: typeof raw.source === 'string' ? raw.source : 'auto',
+    status: typeof raw.status === 'string' ? raw.status : 'empty',
+    sources,
+  };
+}
+
+function parseMarketFeed(raw) {
+  return normalizeMarketFeed(raw);
+}
+
 function hasMarketMetalPrices(metal) {
-  return normalizeMarketPrice(metal?.buyTRY) != null || normalizeMarketPrice(metal?.sellTRY) != null;
+  return normalizeMarketPrice(metal?.sell ?? metal?.sellTRY) != null
+    || normalizeMarketPrice(metal?.buy ?? metal?.buyTRY) != null;
 }
 
 function marketPriceText(value) {
   const n = normalizeMarketPrice(value);
   return n != null ? formatMarketTRY(n) : '—';
+}
+
+function marketMetalSellPrice(metal) {
+  return normalizeMarketPrice(metal?.sell ?? metal?.sellTRY);
+}
+
+function marketMetalBuyPrice(metal) {
+  return normalizeMarketPrice(metal?.buy ?? metal?.buyTRY);
+}
+
+function formatChangePercentHtml(pct) {
+  const n = normalizeMarketChangePercent(pct);
+  if (n == null) return '';
+  const abs = Math.abs(n).toLocaleString('tr-TR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (n > 0) {
+    return `<span class="live-market-change live-market-change--up" aria-label="yükseliş">▲ %${escapeHtml(abs)}</span>`;
+  }
+  if (n < 0) {
+    return `<span class="live-market-change live-market-change--down" aria-label="düşüş">▼ %${escapeHtml(abs)}</span>`;
+  }
+  return `<span class="live-market-change">— %0,00</span>`;
 }
 
 function marketMetalBlock(title, metal) {
@@ -1120,9 +1266,85 @@ function marketMetalBlock(title, metal) {
     <div class="market-asset">
       <p class="market-asset-name">${escapeHtml(title)}</p>
       ${sourceLine}
-      <p class="market-price-line">Alış: <span>${escapeHtml(marketPriceText(metal.buyTRY))}</span></p>
-      <p class="market-price-line">Satış: <span>${escapeHtml(marketPriceText(metal.sellTRY))}</span></p>
+      <p class="market-price-line">Alış: <span>${escapeHtml(marketPriceText(marketMetalBuyPrice(metal)))}</span></p>
+      <p class="market-price-line">Satış: <span>${escapeHtml(marketPriceText(marketMetalSellPrice(metal)))}</span></p>
     </div>`;
+}
+
+function syncMarketSourcePicker() {
+  const activeId = getSelectedMarketSourceId();
+  document.querySelectorAll('.market-source-btn').forEach((btn) => {
+    const isActive = btn.dataset.source === activeId;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
+  });
+}
+
+function renderLiveMarketCard() {
+  const body = document.getElementById('live-market-body');
+  const labelEl = document.getElementById('live-market-source-label');
+  if (!body) return;
+
+  const sourceId = getSelectedMarketSourceId();
+  const source = getMarketSource(sourceId);
+  const sourceLabel = source?.label || MARKET_SOURCE_LABELS[sourceId] || '';
+
+  if (labelEl) labelEl.textContent = sourceLabel;
+
+  const gold = source?.gold;
+  const silver = source?.silver;
+  const hasGold = marketMetalSellPrice(gold) != null;
+  const hasSilver = marketMetalSellPrice(silver) != null;
+
+  if (!hasGold && !hasSilver) {
+    body.innerHTML = '<p class="live-market-unavailable">Fiyat bilgisi alınamadı</p>';
+    return;
+  }
+
+  const goldLine = hasGold
+    ? `<p class="live-market-row">
+        <span class="live-market-row-label">🥇 Gram Altın</span>
+        <span class="live-market-row-value">${escapeHtml(marketPriceText(marketMetalSellPrice(gold)))}${formatChangePercentHtml(gold?.changePercent)}</span>
+      </p>`
+    : `<p class="live-market-row live-market-row--muted"><span class="live-market-row-label">🥇 Gram Altın</span><span>—</span></p>`;
+
+  const silverLine = hasSilver
+    ? `<p class="live-market-row">
+        <span class="live-market-row-label">🥈 Gram Gümüş</span>
+        <span class="live-market-row-value">${escapeHtml(marketPriceText(marketMetalSellPrice(silver)))}${formatChangePercentHtml(silver?.changePercent)}</span>
+      </p>`
+    : `<p class="live-market-row live-market-row--muted"><span class="live-market-row-label">🥈 Gram Gümüş</span><span>—</span></p>`;
+
+  const updatedLine = marketFeed.updatedAt
+    ? `<p class="live-market-updated">Son güncelleme: ${escapeHtml(formatMarketTimeShort(marketFeed.updatedAt))}</p>`
+    : '';
+
+  body.innerHTML = `${goldLine}${silverLine}${updatedLine}`;
+}
+
+function renderTotalCardEstimates() {
+  const goldEl = document.getElementById('gold-total-estimate');
+  const silverEl = document.getElementById('silver-total-estimate');
+  if (!goldEl || !silverEl) return;
+
+  const show = data.settings.showEstimatedValue === true;
+  goldEl.classList.toggle('hidden', !show);
+  silverEl.classList.toggle('hidden', !show);
+  if (!show) {
+    goldEl.textContent = '';
+    silverEl.textContent = '';
+    return;
+  }
+
+  const gold = estimateGoldValueTRY();
+  const silver = estimateSilverValueTRY();
+
+  goldEl.textContent = gold.hasPrice
+    ? `Tahmini değer: ${formatCompactEstimateTRY(gold.value)}`
+    : 'Tahmini değer: hesaplanamadı';
+  silverEl.textContent = silver.hasPrice
+    ? `Tahmini değer: ${formatCompactEstimateTRY(silver.value)}`
+    : 'Tahmini değer: hesaplanamadı';
 }
 
 function marketDataAgeHours() {
@@ -1147,18 +1369,20 @@ function marketStalenessWarningHtml() {
 // Günlük Piyasa: bilgilendirme amaçlı, portföy/kâr-zarar yok.
 function renderMarketCard() {
   const body = document.getElementById('market-card-body');
-  const m = marketFeed;
-  const hasGold = hasMarketMetalPrices(m.gold);
-  const hasSilver = hasMarketMetalPrices(m.silver);
+  const m = getActiveMarketSource();
+  const hasGold = hasMarketMetalPrices(m?.gold);
+  const hasSilver = hasMarketMetalPrices(m?.silver);
   const staleLine = marketStalenessWarningHtml();
+
+  if (!body) return;
 
   if (!hasGold && !hasSilver) {
     body.innerHTML = `<p class="market-unavailable">Fiyat bilgisi alınamadı</p>${staleLine}`;
     return;
   }
 
-  const updatedLine = m.updatedAt
-    ? `<p class="market-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(m.updatedAt))}</p>`
+  const updatedLine = marketFeed.updatedAt
+    ? `<p class="market-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(marketFeed.updatedAt))}</p>`
     : '';
 
   body.innerHTML = `
@@ -1185,7 +1409,9 @@ async function loadMarketFeed(options = {}) {
     if (!parsed) return false;
 
     marketFeed = parsed;
+    renderLiveMarketCard();
     renderMarketCard();
+    renderTotalCardEstimates();
     renderEstimatePanel();
     return true;
   } catch {
@@ -2017,6 +2243,11 @@ document.getElementById('market-refresh-btn')?.addEventListener('click', (e) => 
   e.preventDefault();
   refreshMarketFeed();
 });
+document.querySelector('.market-source-picker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.market-source-btn');
+  if (!btn?.dataset.source) return;
+  setMarketSource(btn.dataset.source);
+});
 document.getElementById('history-records-toggle')?.addEventListener('click', toggleHistoryRecords);
 document.getElementById('edit-initial-records-btn')?.addEventListener('click', openInitialRecordsForEdit);
 document.getElementById('open-add-btn')?.addEventListener('click', openAddForm);
@@ -2062,6 +2293,7 @@ document.getElementById('estimate-toggle').addEventListener('change', (e) => {
   data.settings.showEstimatedValue = e.target.checked;
   saveData();
   renderEstimatePanel();
+  renderTotalCardEstimates();
 });
 
 document.getElementById('history-list').addEventListener('click', (e) => {

@@ -14,7 +14,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=39">
+  <link rel="stylesheet" href="styles.css?v=40">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -39,6 +39,19 @@
         <button type="button" class="home-inspiration-btn" id="open-inspiration-btn">🌱 İlham Al</button>
       </div>
 
+      <section class="live-market-card" id="live-market-card" aria-labelledby="live-market-title">
+        <div class="live-market-head">
+          <h2 class="live-market-title" id="live-market-title">Canlı Piyasa</h2>
+          <span class="live-market-source-label" id="live-market-source-label" aria-hidden="true"></span>
+        </div>
+        <div class="market-source-picker" role="tablist" aria-label="Piyasa kaynağı">
+          <button type="button" class="market-source-btn active" data-source="participation" role="tab" aria-selected="true">Katılım</button>
+          <button type="button" class="market-source-btn" data-source="freeMarket" role="tab" aria-selected="false">Serbest Piyasa</button>
+        </div>
+        <div class="live-market-body" id="live-market-body"></div>
+        <p class="live-market-disclaimer">Fiyatlar bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.</p>
+      </section>
+
       <section class="totals">
         <article class="total-card total-gold">
           <div class="total-card-head">
@@ -48,6 +61,7 @@
           <p class="total-label">Toplam Altın Gramı</p>
           <p class="total-grams" id="gold-total-grams">0 gr</p>
           <p class="total-kg" id="gold-total-kg">0 kg</p>
+          <p class="total-estimate hidden" id="gold-total-estimate"></p>
         </article>
 
         <article class="total-card total-silver">
@@ -58,6 +72,7 @@
           <p class="total-label">Toplam Gümüş Gramı</p>
           <p class="total-grams" id="silver-total-grams">0 gr</p>
           <p class="total-kg" id="silver-total-kg">0 kg</p>
+          <p class="total-estimate hidden" id="silver-total-estimate"></p>
         </article>
       </section>
 
@@ -410,6 +425,6 @@
   </div>
 
   <script src="inspiration-cards.js?v=2"></script>
-  <script src="app.js?v=41"></script>
+  <script src="app.js?v=42"></script>
 </body>
 </html>

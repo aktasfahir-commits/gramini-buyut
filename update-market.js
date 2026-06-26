@@ -4,6 +4,8 @@
  *
  * Kaynak: altin.doviz.com kurum sayfaları (gram altın + gram gümüş birlikte)
  * Öncelik: Dünya Katılım → DestekBank → Vakıf Katılım
+ *
+ * market.json v1.1: sources.participation (Katılım) + sources.freeMarket (placeholder)
  */
 
 const fs = require('fs');
@@ -18,14 +20,24 @@ const INSTITUTIONS = [
   { slug: 'vakif-katilim', label: 'Vakıf Katılım referans kuru' },
 ];
 
-const EMPTY_METAL = { buyTRY: null, sellTRY: null, label: null };
+const EMPTY_SOURCE_METAL = { buy: null, sell: null, changePercent: null };
 
 const EMPTY_MARKET = {
-  gold: { ...EMPTY_METAL },
-  silver: { ...EMPTY_METAL },
   updatedAt: null,
   source: 'auto',
   status: 'empty',
+  sources: {
+    participation: {
+      label: 'Katılım',
+      gold: { ...EMPTY_SOURCE_METAL },
+      silver: { ...EMPTY_SOURCE_METAL },
+    },
+    freeMarket: {
+      label: 'Serbest Piyasa',
+      gold: { ...EMPTY_SOURCE_METAL },
+      silver: { ...EMPTY_SOURCE_METAL },
+    },
+  },
 };
 
 /** TR sayı formatını (6.307,25 / 101,07 / 6307.25) güvenli number'a çevirir. */
@@ -138,9 +150,18 @@ function parseInstitutionPage(html, label) {
   };
 }
 
+function normalizeMetalPrice(metal) {
+  const buy = typeof metal?.buy === 'number' ? metal.buy : metal?.buyTRY;
+  const sell = typeof metal?.sell === 'number' ? metal.sell : metal?.sellTRY;
+  return {
+    buy: typeof buy === 'number' && buy > 0 ? buy : null,
+    sell: typeof sell === 'number' && sell > 0 ? sell : null,
+  };
+}
+
 function hasMetalPrices(metal) {
-  return (typeof metal?.buyTRY === 'number' && metal.buyTRY > 0)
-    || (typeof metal?.sellTRY === 'number' && metal.sellTRY > 0);
+  const { buy, sell } = normalizeMetalPrice(metal);
+  return buy != null || sell != null;
 }
 
 function hasCompletePair(gold, silver) {
@@ -169,9 +190,53 @@ function writeMarket(market) {
   fs.writeFileSync(OUT_PATH, `${JSON.stringify(market, null, 2)}\n`, 'utf8');
 }
 
-function metalsEqual(a, b) {
+function quoteToSourceMetal(metal) {
+  const buy = metal?.buyTRY ?? metal?.buy ?? null;
+  const sell = metal?.sellTRY ?? metal?.sell ?? null;
+  return {
+    buy: typeof buy === 'number' && buy > 0 ? buy : null,
+    sell: typeof sell === 'number' && sell > 0 ? sell : null,
+    changePercent: typeof metal?.changePercent === 'number' ? metal.changePercent : null,
+  };
+}
+
+function getParticipationFromExisting(existing) {
+  if (existing?.sources?.participation) return existing.sources.participation;
+  if (existing?.gold || existing?.silver) {
+    return {
+      label: 'Katılım',
+      gold: quoteToSourceMetal(existing.gold),
+      silver: quoteToSourceMetal(existing.silver),
+    };
+  }
+  return null;
+}
+
+function getFreeMarketFromExisting(existing) {
+  if (existing?.sources?.freeMarket) return existing.sources.freeMarket;
+  return JSON.parse(JSON.stringify(EMPTY_MARKET.sources.freeMarket));
+}
+
+function existingHasAnyPrices(existing) {
+  if (!existing) return false;
+  const participation = getParticipationFromExisting(existing);
+  if (participation && (hasMetalPrices(participation.gold) || hasMetalPrices(participation.silver))) {
+    return true;
+  }
+  const freeMarket = existing.sources?.freeMarket;
+  return freeMarket && (hasMetalPrices(freeMarket.gold) || hasMetalPrices(freeMarket.silver));
+}
+
+function sourceMetalsEqual(a, b) {
   if (!a || !b) return false;
-  return a.buyTRY === b.buyTRY && a.sellTRY === b.sellTRY && a.label === b.label;
+  const goldA = quoteToSourceMetal(a.gold);
+  const goldB = quoteToSourceMetal(b.gold);
+  const silverA = quoteToSourceMetal(a.silver);
+  const silverB = quoteToSourceMetal(b.silver);
+  return goldA.buy === goldB.buy
+    && goldA.sell === goldB.sell
+    && silverA.buy === silverB.buy
+    && silverA.sell === silverB.sell;
 }
 
 function preserveExistingAndExit(reason) {
@@ -208,7 +273,7 @@ async function main() {
   const quote = await fetchMarketFromInstitutions();
 
   if (!quote) {
-    if (existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
+    if (existingHasAnyPrices(existing)) {
       preserveExistingAndExit('Hiçbir kurumdan gram altın/gümüş fiyatı alınamadı.');
     }
 
@@ -220,19 +285,25 @@ async function main() {
   const { gold, silver } = quote;
   const status = resolveStatus(gold, silver);
   const updatedAt = new Date().toISOString();
+  const participation = {
+    label: 'Katılım',
+    gold: quoteToSourceMetal(gold),
+    silver: quoteToSourceMetal(silver),
+  };
   const market = {
-    gold,
-    silver,
     updatedAt,
     source: 'auto',
     status,
+    sources: {
+      participation,
+      freeMarket: getFreeMarketFromExisting(existing),
+    },
   };
 
   writeMarket(market);
 
-  const pricesUnchanged = existing
-    && metalsEqual(existing.gold, gold)
-    && metalsEqual(existing.silver, silver);
+  const prevParticipation = getParticipationFromExisting(existing);
+  const pricesUnchanged = prevParticipation && sourceMetalsEqual(prevParticipation, participation);
   if (pricesUnchanged) {
     console.log(`Fiyatlar değişmedi; updatedAt yine de güncellendi: ${updatedAt}`);
   }
@@ -242,7 +313,7 @@ async function main() {
 main().catch((err) => {
   console.error('Beklenmeyen hata:', err.message);
   const existing = readExistingMarket();
-  if (existing && (hasMetalPrices(existing.gold) || hasMetalPrices(existing.silver))) {
+  if (existingHasAnyPrices(existing)) {
     preserveExistingAndExit(`Beklenmeyen hata: ${err.message}`);
   }
   writeMarket({ ...EMPTY_MARKET, updatedAt: new Date().toISOString() });

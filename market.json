@@ -19,14 +19,14 @@
     "freeMarket": {
       "label": "Serbest Piyasa",
       "gold": {
-        "buy": 6032.5,
-        "sell": 6032.88,
-        "changePercent": 0.17
+        "buy": null,
+        "sell": null,
+        "changePercent": null
       },
       "silver": {
-        "buy": 85.9,
-        "sell": 86.16,
-        "changePercent": -0.5
+        "buy": null,
+        "sell": null,
+        "changePercent": null
       }
     }
   }

@@ -240,6 +240,34 @@ body {
   outline-offset: 2px;
 }
 
+.market-source-btn--disabled,
+.market-source-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.market-source-btn--disabled.active,
+.market-source-btn:disabled.active {
+  background: transparent;
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.market-source-soon {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  background: rgba(107, 83, 16, 0.12);
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
 .live-market-row {
   display: flex;
   align-items: center;

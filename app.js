@@ -238,10 +238,23 @@ const DEFAULT_PRICE_STATE = {
 // Veri kaynağı: data/market.json (GitHub Actions → scripts/update-market.js)
 const MARKET_SOURCE_IDS = ['participation', 'freeMarket'];
 const DEFAULT_MARKET_SOURCE = 'participation';
+// Canlı Serbest Piyasa API hazır olunca true yap — seçici ve kaynak geçişi açılır.
+const FREE_MARKET_USER_SELECTABLE = false;
 const MARKET_SOURCE_LABELS = {
   participation: 'Katılım',
   freeMarket: 'Serbest Piyasa',
 };
+
+function isMarketSourceSelectable(sourceId) {
+  if (sourceId === 'freeMarket') return FREE_MARKET_USER_SELECTABLE;
+  return MARKET_SOURCE_IDS.includes(sourceId);
+}
+
+function resolveMarketSource(sourceId) {
+  if (!MARKET_SOURCE_IDS.includes(sourceId)) return DEFAULT_MARKET_SOURCE;
+  if (!isMarketSourceSelectable(sourceId)) return DEFAULT_MARKET_SOURCE;
+  return sourceId;
+}
 
 const EMPTY_MARKET_METAL = {
   buy: null,
@@ -429,11 +442,13 @@ function loadData() {
 
     if (parsed.version === DATA_VERSION) {
       data = buildLoadedData(parsed.records, parsed.goals, settings, priceState, parsed.achievements);
+      maybeMigrateMarketSource(parsed.settings?.marketSource);
       return;
     }
 
     if (parsed.version === 4) {
       data = buildLoadedData(parsed.records, parsed.goals, settings, priceState, parsed.achievements);
+      maybeMigrateMarketSource(parsed.settings?.marketSource);
       saveData();
       return;
     }
@@ -461,6 +476,12 @@ function loadData() {
     data = emptyData();
   } catch {
     data = emptyData();
+  }
+}
+
+function maybeMigrateMarketSource(previousSource) {
+  if (previousSource === 'freeMarket' && data.settings.marketSource === DEFAULT_MARKET_SOURCE) {
+    saveData();
   }
 }
 
@@ -625,9 +646,7 @@ function milestoneEmoji(milestone) {
 function normalizeSettings(s) {
   const src = s && typeof s === 'object' ? s : {};
   const name = typeof src.name === 'string' && src.name.trim() ? src.name.trim() : null;
-  const marketSource = MARKET_SOURCE_IDS.includes(src.marketSource)
-    ? src.marketSource
-    : DEFAULT_MARKET_SOURCE;
+  const marketSource = resolveMarketSource(src.marketSource);
   return {
     ...src,
     showEstimatedValue: src.showEstimatedValue === true,
@@ -831,8 +850,7 @@ const GOLD_PURITY_VALUE_RATIO = {
 };
 
 function getSelectedMarketSourceId() {
-  const id = data?.settings?.marketSource;
-  return MARKET_SOURCE_IDS.includes(id) ? id : DEFAULT_MARKET_SOURCE;
+  return resolveMarketSource(data?.settings?.marketSource);
 }
 
 function getMarketSource(sourceId) {
@@ -851,7 +869,7 @@ function marketSellPricePerGram(assetType) {
 }
 
 function setMarketSource(sourceId) {
-  if (!MARKET_SOURCE_IDS.includes(sourceId)) return;
+  if (!isMarketSourceSelectable(sourceId)) return;
   if (data.settings.marketSource === sourceId) return;
   data.settings.marketSource = sourceId;
   saveData();
@@ -1274,9 +1292,14 @@ function marketMetalBlock(title, metal) {
 function syncMarketSourcePicker() {
   const activeId = getSelectedMarketSourceId();
   document.querySelectorAll('.market-source-btn').forEach((btn) => {
-    const isActive = btn.dataset.source === activeId;
+    const sourceId = btn.dataset.source;
+    const selectable = isMarketSourceSelectable(sourceId);
+    const isActive = selectable && sourceId === activeId;
     btn.classList.toggle('active', isActive);
+    btn.classList.toggle('market-source-btn--disabled', !selectable);
     btn.setAttribute('aria-selected', String(isActive));
+    btn.disabled = !selectable;
+    btn.setAttribute('aria-disabled', String(!selectable));
   });
 }
 
@@ -2245,7 +2268,7 @@ document.getElementById('market-refresh-btn')?.addEventListener('click', (e) => 
 });
 document.querySelector('.market-source-picker')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.market-source-btn');
-  if (!btn?.dataset.source) return;
+  if (!btn?.dataset.source || btn.disabled) return;
   setMarketSource(btn.dataset.source);
 });
 document.getElementById('history-records-toggle')?.addEventListener('click', toggleHistoryRecords);

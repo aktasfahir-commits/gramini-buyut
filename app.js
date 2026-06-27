@@ -1373,8 +1373,23 @@ function renderTotalCardEstimates() {
 }
 
 /* ---------------- Günün Haberi (V1.2) ---------------- */
-const DAILY_NEWS_SCENARIO_HEADING = {
+const DAILY_NEWS_DEBUG_SCENARIOS = [
+  'noData', 'neutral', 'goldUp', 'goldDown', 'silverUp', 'silverDown', 'bothUp', 'bothDown',
+];
+
+const DAILY_NEWS_SCENARIO_TAG = {
   noData: 'Veri hazırlanıyor',
+  neutral: 'Piyasa sakin',
+  goldUp: 'Altın yükseldi',
+  goldDown: 'Altın geriledi',
+  silverUp: 'Gümüş yükseldi',
+  silverDown: 'Gümüş geriledi',
+  bothUp: 'Altın ve gümüş yükseldi',
+  bothDown: 'Altın ve gümüş geriledi',
+};
+
+const DAILY_NEWS_SCENARIO_HEADING = {
+  noData: 'İlk piyasa karşılaştırması hazırlanıyor.',
   neutral: 'Piyasa sakin',
   goldUp: 'Harika Haber!',
   goldDown: 'Harika Haber!',
@@ -1384,10 +1399,27 @@ const DAILY_NEWS_SCENARIO_HEADING = {
   bothDown: 'Harika Haber!',
 };
 
+const DAILY_NEWS_FIXED_BODY = {
+  noData: 'Yarın itibarıyla altın ve gümüşteki günlük değişimleri burada görebileceksin.',
+};
+
 const DAILY_NEWS_FALLBACK_BODY = {
-  noData: 'Günlük fiyat yönü hesaplanıyor. Bu sırada gram hedefini takip etmeye devam edebilirsin.',
   neutral: 'Bugün büyük bir fiyat hareketi yok. Küçük ama düzenli adımlar birikimin temelidir.',
 };
+
+function getDailyNewsDebugScenario() {
+  try {
+    const raw = new URLSearchParams(window.location.search).get('newsScenario');
+    if (!raw || !DAILY_NEWS_DEBUG_SCENARIOS.includes(raw)) return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+function dailyNewsTagForScenario(scenario) {
+  return DAILY_NEWS_SCENARIO_TAG[scenario] || '';
+}
 
 function dailyNewsMessagesReady() {
   return window.DAILY_NEWS_MESSAGES && typeof window.DAILY_NEWS_MESSAGES === 'object';
@@ -1410,6 +1442,11 @@ function metalChangeDirection(changePercent) {
 }
 
 function resolveDailyNewsContext() {
+  const debugScenario = getDailyNewsDebugScenario();
+  if (debugScenario) {
+    return { scenario: debugScenario, tag: dailyNewsTagForScenario(debugScenario) };
+  }
+
   const source = getActiveMarketSource();
   const goldPct = source?.gold?.changePercent;
   const silverPct = source?.silver?.changePercent;
@@ -1419,33 +1456,33 @@ function resolveDailyNewsContext() {
   const silverKnown = silverPct != null && Number.isFinite(silverPct);
 
   if (!goldKnown && !silverKnown) {
-    return { scenario: 'noData', tag: 'Veri hazırlanıyor' };
+    return { scenario: 'noData', tag: dailyNewsTagForScenario('noData') };
   }
 
   if (goldKnown && silverKnown) {
-    if (g === 'up' && s === 'up') return { scenario: 'bothUp', tag: 'Altın ve gümüş yükseldi' };
-    if (g === 'down' && s === 'down') return { scenario: 'bothDown', tag: 'Altın ve gümüş geriledi' };
-    if (g === 'flat' && s === 'flat') return { scenario: 'neutral', tag: 'Piyasa sakin' };
-    if (g === 'up') return { scenario: 'goldUp', tag: 'Altın yükseldi' };
-    if (g === 'down') return { scenario: 'goldDown', tag: 'Altın geriledi' };
-    if (s === 'up') return { scenario: 'silverUp', tag: 'Gümüş yükseldi' };
-    if (s === 'down') return { scenario: 'silverDown', tag: 'Gümüş geriledi' };
-    return { scenario: 'neutral', tag: 'Piyasa sakin' };
+    if (g === 'up' && s === 'up') return { scenario: 'bothUp', tag: dailyNewsTagForScenario('bothUp') };
+    if (g === 'down' && s === 'down') return { scenario: 'bothDown', tag: dailyNewsTagForScenario('bothDown') };
+    if (g === 'flat' && s === 'flat') return { scenario: 'neutral', tag: dailyNewsTagForScenario('neutral') };
+    if (g === 'up') return { scenario: 'goldUp', tag: dailyNewsTagForScenario('goldUp') };
+    if (g === 'down') return { scenario: 'goldDown', tag: dailyNewsTagForScenario('goldDown') };
+    if (s === 'up') return { scenario: 'silverUp', tag: dailyNewsTagForScenario('silverUp') };
+    if (s === 'down') return { scenario: 'silverDown', tag: dailyNewsTagForScenario('silverDown') };
+    return { scenario: 'neutral', tag: dailyNewsTagForScenario('neutral') };
   }
 
   if (goldKnown) {
-    if (g === 'up') return { scenario: 'goldUp', tag: 'Altın yükseldi' };
-    if (g === 'down') return { scenario: 'goldDown', tag: 'Altın geriledi' };
-    return { scenario: 'neutral', tag: 'Piyasa sakin' };
+    if (g === 'up') return { scenario: 'goldUp', tag: dailyNewsTagForScenario('goldUp') };
+    if (g === 'down') return { scenario: 'goldDown', tag: dailyNewsTagForScenario('goldDown') };
+    return { scenario: 'neutral', tag: dailyNewsTagForScenario('neutral') };
   }
 
   if (silverKnown) {
-    if (s === 'up') return { scenario: 'silverUp', tag: 'Gümüş yükseldi' };
-    if (s === 'down') return { scenario: 'silverDown', tag: 'Gümüş geriledi' };
-    return { scenario: 'neutral', tag: 'Piyasa sakin' };
+    if (s === 'up') return { scenario: 'silverUp', tag: dailyNewsTagForScenario('silverUp') };
+    if (s === 'down') return { scenario: 'silverDown', tag: dailyNewsTagForScenario('silverDown') };
+    return { scenario: 'neutral', tag: dailyNewsTagForScenario('neutral') };
   }
 
-  return { scenario: 'noData', tag: 'Veri hazırlanıyor' };
+  return { scenario: 'noData', tag: dailyNewsTagForScenario('noData') };
 }
 
 function pickDailyNewsMessage(scenario) {
@@ -1459,6 +1496,13 @@ function pickDailyNewsMessage(scenario) {
 
 function dailyNewsHeading(scenario) {
   return DAILY_NEWS_SCENARIO_HEADING[scenario] || 'Harika Haber!';
+}
+
+function dailyNewsBodyText(scenario) {
+  if (DAILY_NEWS_FIXED_BODY[scenario]) return DAILY_NEWS_FIXED_BODY[scenario];
+  return pickDailyNewsMessage(scenario)
+    || DAILY_NEWS_FALLBACK_BODY[scenario]
+    || DAILY_NEWS_FALLBACK_BODY.neutral;
 }
 
 function renderDailyNewsCard() {
@@ -1483,10 +1527,12 @@ function renderDailyNewsCard() {
     tagEl.classList.toggle('hidden', !tag);
   }
 
-  leadEl.textContent = dailyNewsHeading(scenario);
-  bodyEl.textContent = pickDailyNewsMessage(scenario)
-    || DAILY_NEWS_FALLBACK_BODY[scenario]
-    || DAILY_NEWS_FALLBACK_BODY.neutral;
+  const heading = dailyNewsHeading(scenario);
+  const hideHeading = !heading || heading === tag;
+  leadEl.classList.toggle('hidden', hideHeading);
+  if (!hideHeading) leadEl.textContent = heading;
+
+  bodyEl.textContent = dailyNewsBodyText(scenario);
 }
 
 function marketDataAgeHours() {

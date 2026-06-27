@@ -1393,7 +1393,7 @@ function metalChangeDirection(changePercent) {
   return 'flat';
 }
 
-function resolveDailyNewsScenario() {
+function resolveDailyNewsContext() {
   const source = getActiveMarketSource();
   const goldPct = source?.gold?.changePercent;
   const silverPct = source?.silver?.changePercent;
@@ -1402,24 +1402,34 @@ function resolveDailyNewsScenario() {
   const goldKnown = goldPct != null && Number.isFinite(goldPct);
   const silverKnown = silverPct != null && Number.isFinite(silverPct);
 
+  if (!goldKnown && !silverKnown) {
+    return { scenario: 'noData', tag: 'Veri hazırlanıyor' };
+  }
+
   if (goldKnown && silverKnown) {
-    if (g === 'up' && s === 'up') return 'bothUp';
-    if (g === 'down' && s === 'down') return 'bothDown';
-    if (g === 'up') return 'goldUp';
-    if (g === 'down') return 'goldDown';
-    if (s === 'up') return 'silverUp';
-    if (s === 'down') return 'silverDown';
-    return 'neutral';
+    if (g === 'up' && s === 'up') return { scenario: 'bothUp', tag: 'Altın ve gümüş yükseldi' };
+    if (g === 'down' && s === 'down') return { scenario: 'bothDown', tag: 'Altın ve gümüş geriledi' };
+    if (g === 'flat' && s === 'flat') return { scenario: 'neutral', tag: 'Piyasa sakin' };
+    if (g === 'up') return { scenario: 'goldUp', tag: 'Altın yükseldi' };
+    if (g === 'down') return { scenario: 'goldDown', tag: 'Altın geriledi' };
+    if (s === 'up') return { scenario: 'silverUp', tag: 'Gümüş yükseldi' };
+    if (s === 'down') return { scenario: 'silverDown', tag: 'Gümüş geriledi' };
+    return { scenario: 'neutral', tag: 'Piyasa sakin' };
   }
+
   if (goldKnown) {
-    if (g === 'up') return 'goldUp';
-    if (g === 'down') return 'goldDown';
+    if (g === 'up') return { scenario: 'goldUp', tag: 'Altın yükseldi' };
+    if (g === 'down') return { scenario: 'goldDown', tag: 'Altın geriledi' };
+    return { scenario: 'neutral', tag: 'Piyasa sakin' };
   }
+
   if (silverKnown) {
-    if (s === 'up') return 'silverUp';
-    if (s === 'down') return 'silverDown';
+    if (s === 'up') return { scenario: 'silverUp', tag: 'Gümüş yükseldi' };
+    if (s === 'down') return { scenario: 'silverDown', tag: 'Gümüş geriledi' };
+    return { scenario: 'neutral', tag: 'Piyasa sakin' };
   }
-  return 'neutral';
+
+  return { scenario: 'noData', tag: 'Veri hazırlanıyor' };
 }
 
 function pickDailyNewsMessage(scenario) {
@@ -1433,6 +1443,7 @@ function pickDailyNewsMessage(scenario) {
 
 function renderDailyNewsCard() {
   const card = document.getElementById('daily-news-card');
+  const tagEl = document.getElementById('daily-news-tag');
   const leadEl = document.getElementById('daily-news-lead');
   const bodyEl = document.getElementById('daily-news-body');
   if (!card || !leadEl || !bodyEl) return;
@@ -1443,10 +1454,17 @@ function renderDailyNewsCard() {
   }
 
   card.classList.remove('hidden');
-  const message = pickDailyNewsMessage(resolveDailyNewsScenario());
+  const { scenario, tag } = resolveDailyNewsContext();
+  const message = pickDailyNewsMessage(scenario);
+
+  if (tagEl) {
+    tagEl.textContent = tag || '';
+    tagEl.classList.toggle('hidden', !tag);
+  }
+
   if (!message) {
     leadEl.textContent = 'Harika Haber!';
-    bodyEl.textContent = 'Bugün gram büyütmeye devam etmek için güzel bir gün.';
+    bodyEl.textContent = 'Bugün piyasa sakin görünüyor.\nGram hedefini büyütmek için düzenli adımlar hâlâ en güçlü yol.';
     return;
   }
 

@@ -375,13 +375,28 @@ body {
   margin: 0 0 6px;
 }
 
+.daily-news-card--calm .daily-news-lead {
+  font-weight: 700;
+  color: #2e6b32;
+}
+
+.daily-news-card--calm {
+  background: linear-gradient(140deg, #f0f8f1, #dcefe0);
+  border-color: rgba(46, 125, 50, 0.2);
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.08);
+}
+
+.daily-news-card--calm .daily-news-tag {
+  background: rgba(255, 255, 255, 0.85);
+  color: #356859;
+}
+
 .daily-news-body {
   font-size: 0.82rem;
   font-weight: 600;
   color: #33691e;
   line-height: 1.45;
   margin: 0;
-  white-space: pre-line;
 }
 
 /* Total cards (en önemli metrikler) */

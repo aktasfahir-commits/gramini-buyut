@@ -1373,6 +1373,22 @@ function renderTotalCardEstimates() {
 }
 
 /* ---------------- Günün Haberi (V1.2) ---------------- */
+const DAILY_NEWS_SCENARIO_HEADING = {
+  noData: 'Veri hazırlanıyor',
+  neutral: 'Piyasa sakin',
+  goldUp: 'Harika Haber!',
+  goldDown: 'Harika Haber!',
+  silverUp: 'Harika Haber!',
+  silverDown: 'Harika Haber!',
+  bothUp: 'Harika Haber!',
+  bothDown: 'Harika Haber!',
+};
+
+const DAILY_NEWS_FALLBACK_BODY = {
+  noData: 'Günlük fiyat yönü hesaplanıyor. Bu sırada gram hedefini takip etmeye devam edebilirsin.',
+  neutral: 'Bugün büyük bir fiyat hareketi yok. Küçük ama düzenli adımlar birikimin temelidir.',
+};
+
 function dailyNewsMessagesReady() {
   return window.DAILY_NEWS_MESSAGES && typeof window.DAILY_NEWS_MESSAGES === 'object';
 }
@@ -1441,6 +1457,10 @@ function pickDailyNewsMessage(scenario) {
   return pool[idx];
 }
 
+function dailyNewsHeading(scenario) {
+  return DAILY_NEWS_SCENARIO_HEADING[scenario] || 'Harika Haber!';
+}
+
 function renderDailyNewsCard() {
   const card = document.getElementById('daily-news-card');
   const tagEl = document.getElementById('daily-news-tag');
@@ -1455,21 +1475,18 @@ function renderDailyNewsCard() {
 
   card.classList.remove('hidden');
   const { scenario, tag } = resolveDailyNewsContext();
-  const message = pickDailyNewsMessage(scenario);
+  const isCalm = scenario === 'noData' || scenario === 'neutral';
+  card.classList.toggle('daily-news-card--calm', isCalm);
 
   if (tagEl) {
     tagEl.textContent = tag || '';
     tagEl.classList.toggle('hidden', !tag);
   }
 
-  if (!message) {
-    leadEl.textContent = 'Harika Haber!';
-    bodyEl.textContent = 'Bugün piyasa sakin görünüyor.\nGram hedefini büyütmek için düzenli adımlar hâlâ en güçlü yol.';
-    return;
-  }
-
-  leadEl.textContent = message.lead || 'Harika Haber!';
-  bodyEl.textContent = message.body || '';
+  leadEl.textContent = dailyNewsHeading(scenario);
+  bodyEl.textContent = pickDailyNewsMessage(scenario)
+    || DAILY_NEWS_FALLBACK_BODY[scenario]
+    || DAILY_NEWS_FALLBACK_BODY.neutral;
 }
 
 function marketDataAgeHours() {

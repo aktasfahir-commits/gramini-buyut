@@ -190,13 +190,24 @@ function writeMarket(market) {
   fs.writeFileSync(OUT_PATH, `${JSON.stringify(market, null, 2)}\n`, 'utf8');
 }
 
-function quoteToSourceMetal(metal) {
+function computeChangePercent(currentSell, previousSell) {
+  if (typeof currentSell !== 'number' || typeof previousSell !== 'number' || previousSell <= 0) {
+    return null;
+  }
+  return Math.round(((currentSell - previousSell) / previousSell) * 10000) / 100;
+}
+
+function quoteToSourceMetal(metal, previousMetal) {
   const buy = metal?.buyTRY ?? metal?.buy ?? null;
   const sell = metal?.sellTRY ?? metal?.sell ?? null;
+  const prevSell = previousMetal?.sell ?? previousMetal?.sellTRY ?? null;
   return {
     buy: typeof buy === 'number' && buy > 0 ? buy : null,
     sell: typeof sell === 'number' && sell > 0 ? sell : null,
-    changePercent: typeof metal?.changePercent === 'number' ? metal.changePercent : null,
+    changePercent: computeChangePercent(
+      typeof sell === 'number' ? sell : null,
+      typeof prevSell === 'number' ? prevSell : null
+    ),
   };
 }
 
@@ -285,10 +296,11 @@ async function main() {
   const { gold, silver } = quote;
   const status = resolveStatus(gold, silver);
   const updatedAt = new Date().toISOString();
+  const prevParticipation = getParticipationFromExisting(existing);
   const participation = {
     label: 'Katılım',
-    gold: quoteToSourceMetal(gold),
-    silver: quoteToSourceMetal(silver),
+    gold: quoteToSourceMetal(gold, prevParticipation?.gold),
+    silver: quoteToSourceMetal(silver, prevParticipation?.silver),
   };
   const market = {
     updatedAt,
@@ -302,7 +314,6 @@ async function main() {
 
   writeMarket(market);
 
-  const prevParticipation = getParticipationFromExisting(existing);
   const pricesUnchanged = prevParticipation && sourceMetalsEqual(prevParticipation, participation);
   if (pricesUnchanged) {
     console.log(`Fiyatlar değişmedi; updatedAt yine de güncellendi: ${updatedAt}`);

@@ -875,6 +875,7 @@ function setMarketSource(sourceId) {
   saveData();
   syncMarketSourcePicker();
   renderLiveMarketCard();
+  renderDailyNewsCard();
   renderMarketCard();
   renderTotalCardEstimates();
   renderEstimatePanel();
@@ -994,6 +995,7 @@ function renderHome() {
   renderMotivation();
   syncMarketSourcePicker();
   renderLiveMarketCard();
+  renderDailyNewsCard();
   renderTotalCardEstimates();
   renderMarketCard();
 }
@@ -1370,6 +1372,88 @@ function renderTotalCardEstimates() {
     : 'Tahmini değer: hesaplanamadı';
 }
 
+/* ---------------- Günün Haberi (V1.2) ---------------- */
+function dailyNewsMessagesReady() {
+  return window.DAILY_NEWS_MESSAGES && typeof window.DAILY_NEWS_MESSAGES === 'object';
+}
+
+function dailyNewsHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+function metalChangeDirection(changePercent) {
+  if (changePercent == null || !Number.isFinite(changePercent)) return 'unknown';
+  if (changePercent > 0) return 'up';
+  if (changePercent < 0) return 'down';
+  return 'flat';
+}
+
+function resolveDailyNewsScenario() {
+  const source = getActiveMarketSource();
+  const goldPct = source?.gold?.changePercent;
+  const silverPct = source?.silver?.changePercent;
+  const g = metalChangeDirection(goldPct);
+  const s = metalChangeDirection(silverPct);
+  const goldKnown = goldPct != null && Number.isFinite(goldPct);
+  const silverKnown = silverPct != null && Number.isFinite(silverPct);
+
+  if (goldKnown && silverKnown) {
+    if (g === 'up' && s === 'up') return 'bothUp';
+    if (g === 'down' && s === 'down') return 'bothDown';
+    if (g === 'up') return 'goldUp';
+    if (g === 'down') return 'goldDown';
+    if (s === 'up') return 'silverUp';
+    if (s === 'down') return 'silverDown';
+    return 'neutral';
+  }
+  if (goldKnown) {
+    if (g === 'up') return 'goldUp';
+    if (g === 'down') return 'goldDown';
+  }
+  if (silverKnown) {
+    if (s === 'up') return 'silverUp';
+    if (s === 'down') return 'silverDown';
+  }
+  return 'neutral';
+}
+
+function pickDailyNewsMessage(scenario) {
+  const pools = window.DAILY_NEWS_MESSAGES;
+  if (!pools) return null;
+  const pool = pools[scenario] || pools.neutral;
+  if (!Array.isArray(pool) || !pool.length) return null;
+  const idx = dailyNewsHash(`${today()}:${scenario}`) % pool.length;
+  return pool[idx];
+}
+
+function renderDailyNewsCard() {
+  const card = document.getElementById('daily-news-card');
+  const leadEl = document.getElementById('daily-news-lead');
+  const bodyEl = document.getElementById('daily-news-body');
+  if (!card || !leadEl || !bodyEl) return;
+
+  if (!dailyNewsMessagesReady()) {
+    card.classList.add('hidden');
+    return;
+  }
+
+  card.classList.remove('hidden');
+  const message = pickDailyNewsMessage(resolveDailyNewsScenario());
+  if (!message) {
+    leadEl.textContent = 'Harika Haber!';
+    bodyEl.textContent = 'Bugün gram büyütmeye devam etmek için güzel bir gün.';
+    return;
+  }
+
+  leadEl.textContent = message.lead || 'Harika Haber!';
+  bodyEl.textContent = message.body || '';
+}
+
 function marketDataAgeHours() {
   if (!marketFeed.updatedAt) return null;
   const updated = new Date(marketFeed.updatedAt);
@@ -1433,6 +1517,7 @@ async function loadMarketFeed(options = {}) {
 
     marketFeed = parsed;
     renderLiveMarketCard();
+    renderDailyNewsCard();
     renderMarketCard();
     renderTotalCardEstimates();
     renderEstimatePanel();

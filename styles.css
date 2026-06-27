@@ -324,6 +324,52 @@ body {
   text-align: center;
 }
 
+/* Günün Haberi (V1.2 — her zaman olumlu, yeşil ton) */
+.daily-news-card {
+  background: linear-gradient(140deg, #edf7ee, #d4ecd6);
+  border: 1px solid rgba(46, 125, 50, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 10px rgba(46, 125, 50, 0.1);
+}
+
+.daily-news-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.daily-news-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.daily-news-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #1b5e20;
+  margin: 0;
+}
+
+.daily-news-lead {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #2e7d32;
+  margin: 0 0 6px;
+}
+
+.daily-news-body {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #33691e;
+  line-height: 1.45;
+  margin: 0;
+  white-space: pre-line;
+}
+
 /* Total cards (en önemli metrikler) */
 .totals {
   display: grid;

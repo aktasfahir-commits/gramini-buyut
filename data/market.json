@@ -1,15 +1,15 @@
 {
   "gold": {
-    "buyTRY": 6123.56,
-    "sellTRY": 6155.95,
+    "buyTRY": 6154.57,
+    "sellTRY": 6184.13,
     "label": "Dünya Katılım referans kuru"
   },
   "silver": {
-    "buyTRY": 89.48,
-    "sellTRY": 90.18,
+    "buyTRY": 90.97,
+    "sellTRY": 91.63,
     "label": "Dünya Katılım referans kuru"
   },
-  "updatedAt": "2026-07-07T22:42:21.050Z",
+  "updatedAt": "2026-07-08T07:56:09.113Z",
   "source": "auto",
   "status": "ok"
 }

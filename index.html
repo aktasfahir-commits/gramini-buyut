@@ -14,7 +14,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=45">
+  <link rel="stylesheet" href="styles.css?v=46">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -34,9 +34,12 @@
 
     <!-- ANA EKRAN -->
     <main class="view" id="home-view">
-      <div class="home-help-wrap">
-        <button type="button" class="home-help-btn" id="open-onboarding-btn">Uygulama nasıl kullanılır?</button>
-        <button type="button" class="home-inspiration-btn" id="open-inspiration-btn">🌱 İlham Al</button>
+      <div class="home-cta-block">
+        <button type="button" class="btn btn-primary btn-block home-cta-primary" id="open-add-btn" aria-label="Gram Ekle">+ Gram Ekle</button>
+        <div class="home-help-wrap">
+          <button type="button" class="home-help-btn" id="open-onboarding-btn">Uygulama nasıl kullanılır?</button>
+          <button type="button" class="home-inspiration-btn" id="open-inspiration-btn">🌱 İlham Al</button>
+        </div>
       </div>
 
       <section class="live-market-card" id="live-market-card" aria-labelledby="live-market-title">
@@ -87,7 +90,6 @@
       </section>
 
       <div class="home-actions home-actions--primary">
-        <button type="button" class="btn btn-primary btn-block" id="open-add-btn">+ Gram Ekle</button>
         <button type="button" class="btn btn-ghost btn-block" id="open-history-btn">📊 Toplam Birikimim</button>
       </div>
 
@@ -375,30 +377,44 @@
       </div>
     </div>
 
-    <!-- HOŞ GELDİN / UYGULAMA HAKKINDA -->
-    <div id="onboarding-overlay" class="modal-overlay onboarding-overlay hidden">
-      <div class="modal onboarding-modal" role="dialog" aria-labelledby="onboarding-title">
-        <h2 class="onboarding-title" id="onboarding-title">🥇 Gramını Büyüt Nasıl Kullanılır?</h2>
-        <div class="onboarding-body">
-          <p>Gramını Büyüt; altın ve gümüş birikimini gram gram takip etmen için tasarlandı.</p>
-          <p>Bu bir kâr-zarar ya da borsa takip uygulaması değildir. Amaç, fiziksel birikimini sade şekilde görmek ve büyütmektir.</p>
-          <p class="onboarding-subtitle">Nasıl başlarsın?</p>
-          <ol class="onboarding-list onboarding-steps">
-            <li><strong>Zaten birikimin varsa:</strong> &quot;Başlangıç Birikimi Ekle&quot; ile uygulamaya başlamadan önce sahip olduğun altın ve gümüşleri ekleyebilirsin.</li>
-            <li><strong>Yeni alım yaptığında:</strong> &quot;+ Gram Ekle&quot; ile aldığın altın veya gümüşü kaydedebilirsin.</li>
-            <li><strong>Hedef belirlemek istersen:</strong> &quot;Hedefim&quot; alanından altın veya gümüş için gram hedefi koyabilirsin.</li>
-            <li><strong>Birikimini görmek istediğinde:</strong> &quot;Toplam Birikimim&quot; ekranında toplam gramlarını, ayar kırılımını ve istersen bugünkü yaklaşık değerini görebilirsin.</li>
-            <li><strong>Kayıtlarını düzenlemek istersen:</strong> &quot;Toplam Birikimim&quot; ekranındaki &quot;Kayıtları Göster&quot; bölümünden eski kayıtlarını düzenleyebilir veya silebilirsin.</li>
-            <li><strong>Başlangıç birikimini düzenlemek istersen:</strong> &quot;Başlangıç Birikimlerimi Düzenle&quot; butonundan önceki birikim kayıtlarına ulaşabilirsin.</li>
-          </ol>
-          <p class="onboarding-subtitle">Unutma:</p>
-          <p>Büyük birikimler çoğu zaman büyük adımlarla değil, küçük ama düzenli adımlarla oluşur.</p>
-          <p>Bugün az olabilir ama az, yoktan çoktur.</p>
-          <p class="onboarding-signoff">Dokunuyorsan senindir. 🥇🥈</p>
+    <!-- HOŞ GELDİN / UYGULAMA HAKKINDA (çok adımlı) -->
+    <div id="onboarding-overlay" class="modal-overlay onboarding-overlay hidden" aria-hidden="true">
+      <div class="modal onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" aria-describedby="onboarding-desc">
+        <div class="onboarding-progress" aria-hidden="true">
+          <span class="onboarding-dot" data-dot="0"></span>
+          <span class="onboarding-dot" data-dot="1"></span>
+          <span class="onboarding-dot" data-dot="2"></span>
         </div>
+
+        <h2 class="onboarding-title" id="onboarding-title">Gramını Büyüt’e Hoş Geldin</h2>
+        <div class="onboarding-body" id="onboarding-desc">
+          <div class="onboarding-step" data-step="0">
+            <p class="onboarding-lead">Fiziksel altın ve gümüş birikimini gram bazında sade bir şekilde takip et.</p>
+            <p class="onboarding-note">Bu bir kâr-zarar veya borsa takip uygulaması değildir. Amaç, fiziksel birikimini sade şekilde görmek ve büyütmektir.</p>
+          </div>
+
+          <div class="onboarding-step hidden" data-step="1">
+            <p class="onboarding-lead">Hesap açman gerekmez. Kayıtların bu cihazda saklanır.</p>
+          </div>
+
+          <div class="onboarding-step hidden" data-step="2">
+            <p class="onboarding-lead">Birikim hızın değil, devam etmen önemli. Hazırsan ilk gramını ekle.</p>
+            <p class="onboarding-subtitle">Kısa ipuçları</p>
+            <ul class="onboarding-list onboarding-steps">
+              <li><strong>Zaten birikimin varsa:</strong> &quot;Başlangıç Birikimi Ekle&quot; ile önceki altın ve gümüşlerini kaydedebilirsin.</li>
+              <li><strong>Yeni alım:</strong> &quot;+ Gram Ekle&quot; ile aldığın altın veya gümüşü ekleyebilirsin.</li>
+              <li><strong>Hedef ve takip:</strong> &quot;Hedefim&quot; ve &quot;Toplam Birikimim&quot; ile ilerlemeni görebilir, kayıtlarını düzenleyebilirsin.</li>
+            </ul>
+            <p class="onboarding-signoff">Dokunuyorsan senindir. 🥇🥈</p>
+          </div>
+        </div>
+
         <div class="onboarding-actions">
-          <button type="button" class="btn btn-primary btn-block" id="onboarding-start-btn">Başlayalım</button>
-          <button type="button" class="btn btn-ghost btn-block" id="onboarding-got-it-btn">Anladım</button>
+          <button type="button" class="btn btn-primary btn-block" id="onboarding-primary-btn" aria-label="İleri">İleri</button>
+          <div class="onboarding-nav-row">
+            <button type="button" class="btn btn-ghost onboarding-nav-btn hidden" id="onboarding-back-btn" aria-label="Geri">Geri</button>
+            <button type="button" class="btn btn-ghost onboarding-nav-btn" id="onboarding-skip-btn" aria-label="Atla">Atla</button>
+          </div>
         </div>
       </div>
     </div>
@@ -436,6 +452,6 @@
 
   <script src="inspiration-cards.js?v=2"></script>
   <script src="daily-news-messages.js?v=3"></script>
-  <script src="app.js?v=47"></script>
+  <script src="app.js?v=48"></script>
 </body>
 </html>

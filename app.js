@@ -3,6 +3,13 @@
 
 const STORAGE_KEY = 'gramini-buyut';
 const DATA_VERSION = 5;
+const ONBOARDING_LS_KEY = 'graminiBuyutOnboardingCompleted';
+const ONBOARDING_STEP_TITLES = [
+  'Gramını Büyüt’e Hoş Geldin',
+  'Verilerin Sende Kalır',
+  'İlk Gramını Ekle',
+];
+const ONBOARDING_STEP_COUNT = ONBOARDING_STEP_TITLES.length;
 
 const RECORD_TYPE_ENTRY = 'entry';
 const RECORD_TYPE_INITIAL = 'initial';
@@ -1809,8 +1816,13 @@ function switchView(view) {
   document.getElementById('home-view').classList.toggle('hidden', view !== 'home');
   document.getElementById('add-view').classList.toggle('hidden', view !== 'add');
   document.getElementById('history-view').classList.toggle('hidden', view !== 'history');
-  if (view === 'home') renderHome();
-  else if (view === 'history') {
+  if (view === 'home') {
+    renderHome();
+    if (pendingNamePrompt) {
+      pendingNamePrompt = false;
+      maybeAskName();
+    }
+  } else if (view === 'history') {
     historyRecordsExpanded = false;
     renderHistory();
   }
@@ -2234,11 +2246,127 @@ function confirmDelete() {
 /* ---------------- Hoş geldin / uygulama hakkında ---------------- */
 let onboardingFromSettings = false;
 let pendingStartCardFocus = false;
+let pendingNamePrompt = false;
+let onboardingStep = 0;
+let onboardingEscBound = false;
+
+function isOnboardingCompleted() {
+  try {
+    return localStorage.getItem(ONBOARDING_LS_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function markOnboardingCompleted() {
+  try {
+    localStorage.setItem(ONBOARDING_LS_KEY, 'true');
+  } catch {
+    /* private mode / quota */
+  }
+  if (!data.settings.onboardingSeen) {
+    data.settings.onboardingSeen = true;
+    saveData();
+  }
+}
+
+/** Mevcut kullanıcılar yeni anahtarı görmeden eski onboardingSeen ile geçiş yapar. */
+function syncOnboardingCompletionFlag() {
+  if (isOnboardingCompleted()) {
+    if (!data.settings.onboardingSeen) {
+      data.settings.onboardingSeen = true;
+      saveData();
+    }
+    return;
+  }
+  if (data.settings.onboardingSeen) {
+    markOnboardingCompleted();
+  }
+}
+
+function setOnboardingBodyScrollLocked(locked) {
+  document.body.style.overflow = locked ? 'hidden' : '';
+}
+
+function onOnboardingKeydown(e) {
+  if (e.key !== 'Escape') return;
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay || overlay.classList.contains('hidden')) return;
+  e.preventDefault();
+  // ESC: tamamlandı say, Gram Ekle açma
+  dismissOnboarding({ openAdd: false });
+}
+
+function bindOnboardingEsc(bind) {
+  if (bind && !onboardingEscBound) {
+    document.addEventListener('keydown', onOnboardingKeydown);
+    onboardingEscBound = true;
+  } else if (!bind && onboardingEscBound) {
+    document.removeEventListener('keydown', onOnboardingKeydown);
+    onboardingEscBound = false;
+  }
+}
+
+function renderOnboardingStep() {
+  const step = Math.max(0, Math.min(onboardingStep, ONBOARDING_STEP_COUNT - 1));
+  onboardingStep = step;
+  const isLast = step === ONBOARDING_STEP_COUNT - 1;
+
+  const titleEl = document.getElementById('onboarding-title');
+  if (titleEl) titleEl.textContent = ONBOARDING_STEP_TITLES[step];
+
+  document.querySelectorAll('#onboarding-overlay .onboarding-step').forEach((el) => {
+    const match = Number(el.dataset.step) === step;
+    el.classList.toggle('hidden', !match);
+  });
+
+  document.querySelectorAll('#onboarding-overlay .onboarding-dot').forEach((dot) => {
+    dot.classList.toggle('active', Number(dot.dataset.dot) === step);
+  });
+
+  const primaryBtn = document.getElementById('onboarding-primary-btn');
+  if (primaryBtn) {
+    primaryBtn.textContent = isLast ? 'Gram Ekle' : 'İleri';
+    primaryBtn.setAttribute('aria-label', isLast ? 'Gram Ekle' : 'İleri');
+  }
+
+  const backBtn = document.getElementById('onboarding-back-btn');
+  if (backBtn) backBtn.classList.toggle('hidden', step === 0);
+
+  const skipBtn = document.getElementById('onboarding-skip-btn');
+  if (skipBtn) {
+    // Son adımda da Atla kalsın; manuel tekrar açılışta da kapatma yolu olsun
+    skipBtn.classList.remove('hidden');
+  }
+}
+
+function showOnboardingOverlay() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay) return;
+  renderOnboardingStep();
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+  setOnboardingBodyScrollLocked(true);
+  bindOnboardingEsc(true);
+  const primaryBtn = document.getElementById('onboarding-primary-btn');
+  setTimeout(() => primaryBtn?.focus(), 60);
+}
+
+function hideOnboardingOverlay() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay) return;
+  overlay.classList.add('hidden');
+  overlay.setAttribute('aria-hidden', 'true');
+  setOnboardingBodyScrollLocked(false);
+  bindOnboardingEsc(false);
+}
 
 function maybeShowOnboarding() {
-  if (data.settings.onboardingSeen) return;
+  syncOnboardingCompletionFlag();
+  if (isOnboardingCompleted()) return;
   onboardingFromSettings = false;
-  document.getElementById('onboarding-overlay').classList.remove('hidden');
+  onboardingStep = 0;
+  showOnboardingOverlay();
 }
 
 function focusStartCardSection() {
@@ -2246,7 +2374,7 @@ function focusStartCardSection() {
   switchView('home');
 
   const card = document.getElementById('start-card');
-  if (card.classList.contains('hidden')) return;
+  if (!card || card.classList.contains('hidden')) return;
 
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   card.classList.remove('start-card--focus');
@@ -2257,24 +2385,52 @@ function focusStartCardSection() {
 }
 
 function dismissOnboarding(options = {}) {
-  const focusStartCard = options.focusStartCard === true;
+  const openAdd = options.openAdd === true;
   const fromSettings = onboardingFromSettings;
   onboardingFromSettings = false;
-  if (!fromSettings && !data.settings.onboardingSeen) {
-    data.settings.onboardingSeen = true;
-    saveData();
+
+  if (!fromSettings) {
+    markOnboardingCompleted();
   }
-  document.getElementById('onboarding-overlay').classList.add('hidden');
-  if (focusStartCard) pendingStartCardFocus = true;
+
+  hideOnboardingOverlay();
+
+  if (openAdd) {
+    // İsim sorusu Gram Ekle ekranını engellemesin; eve dönünce sorulur
+    if (!fromSettings && !data.settings.nameAsked) pendingNamePrompt = true;
+    openAddForm();
+    return;
+  }
+
   if (!fromSettings) maybeAskName();
-  if (focusStartCard && data.settings.nameAsked) {
+  if (pendingStartCardFocus && data.settings.nameAsked) {
     setTimeout(focusStartCardSection, 80);
   }
 }
 
 function openOnboarding() {
   onboardingFromSettings = true;
-  document.getElementById('onboarding-overlay').classList.remove('hidden');
+  onboardingStep = 0;
+  showOnboardingOverlay();
+}
+
+function onboardingGoNext() {
+  if (onboardingStep >= ONBOARDING_STEP_COUNT - 1) {
+    dismissOnboarding({ openAdd: true });
+    return;
+  }
+  onboardingStep += 1;
+  renderOnboardingStep();
+}
+
+function onboardingGoBack() {
+  if (onboardingStep <= 0) return;
+  onboardingStep -= 1;
+  renderOnboardingStep();
+}
+
+function onboardingSkip() {
+  dismissOnboarding({ openAdd: false });
 }
 
 /* ---------------- İsim (ilk açılışta bir kez) ---------------- */
@@ -2532,10 +2688,14 @@ document.getElementById('initial-purity-segment').addEventListener('click', (e) 
   if (btn) setInitialFormPurity(btn.dataset.purity);
 });
 
-document.getElementById('onboarding-start-btn').addEventListener('click', () => dismissOnboarding({ focusStartCard: true }));
-document.getElementById('onboarding-got-it-btn').addEventListener('click', () => dismissOnboarding());
+document.getElementById('onboarding-primary-btn')?.addEventListener('click', onboardingGoNext);
+document.getElementById('onboarding-back-btn')?.addEventListener('click', onboardingGoBack);
+document.getElementById('onboarding-skip-btn')?.addEventListener('click', onboardingSkip);
 document.getElementById('onboarding-overlay')?.addEventListener('click', (e) => {
-  if (e.target.id === 'onboarding-overlay') dismissOnboarding();
+  // İlk kullanımda dışarı tıklayınca kapanmasın; manuel açılışta kapanabilir
+  if (e.target.id === 'onboarding-overlay' && onboardingFromSettings) {
+    dismissOnboarding({ openAdd: false });
+  }
 });
 
 document.getElementById('celebrate-close')?.addEventListener('click', closeCelebration);
@@ -2547,9 +2707,10 @@ document.getElementById('delete-overlay').addEventListener('click', (e) => {
 
 /* ---------------- Başlat ---------------- */
 loadData();
+syncOnboardingCompletionFlag();
 setFormAsset('gold');
 switchView('home');
-if (data.settings.onboardingSeen) {
+if (isOnboardingCompleted()) {
   maybeAskName();
 } else {
   maybeShowOnboarding();

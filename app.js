@@ -3,6 +3,7 @@
 
 const STORAGE_KEY = 'gramini-buyut';
 const DATA_VERSION = 5;
+const APP_DISPLAY_VERSION = '1.4.0';
 const ONBOARDING_LS_KEY = 'graminiBuyutOnboardingCompleted';
 const ONBOARDING_STEP_TITLES = [
   'Gramını Büyüt’e Hoş Geldin',
@@ -245,8 +246,11 @@ const DEFAULT_PRICE_STATE = {
 // Veri kaynağı: data/market.json (GitHub Actions → scripts/update-market.js)
 const MARKET_SOURCE_IDS = ['participation', 'freeMarket'];
 const DEFAULT_MARKET_SOURCE = 'participation';
-// Canlı Serbest Piyasa API hazır olunca true yap — seçici ve kaynak geçişi açılır.
-const FREE_MARKET_USER_SELECTABLE = false;
+// Serbest Piyasa: altin.doviz.com ana sayfa (Serbest Piyasa tablosu) → scripts/update-market.js
+// Ücretli Harem/KTB API anahtarı yok; aynı doviz.com ailesinden scrape ile beslenir.
+const FREE_MARKET_USER_SELECTABLE = true;
+/** Kaynak lastSuccessAt bu süreden eskiyse stale sayılır (6 saat). update-market.js ile aynı. */
+const MARKET_STALE_AFTER_MS = 6 * 60 * 60 * 1000;
 const MARKET_SOURCE_LABELS = {
   participation: 'Katılım',
   freeMarket: 'Serbest Piyasa',
@@ -272,6 +276,9 @@ const EMPTY_MARKET_METAL = {
 
 const EMPTY_MARKET_SOURCE = {
   label: null,
+  sourceName: null,
+  lastSuccessAt: null,
+  dataStatus: 'unavailable',
   gold: { ...EMPTY_MARKET_METAL },
   silver: { ...EMPTY_MARKET_METAL },
 };
@@ -282,11 +289,13 @@ const EMPTY_MARKET_FEED = {
   status: 'empty',
   sources: {
     participation: {
+      ...EMPTY_MARKET_SOURCE,
       label: MARKET_SOURCE_LABELS.participation,
       gold: { ...EMPTY_MARKET_METAL },
       silver: { ...EMPTY_MARKET_METAL },
     },
     freeMarket: {
+      ...EMPTY_MARKET_SOURCE,
       label: MARKET_SOURCE_LABELS.freeMarket,
       gold: { ...EMPTY_MARKET_METAL },
       silver: { ...EMPTY_MARKET_METAL },
@@ -992,6 +1001,11 @@ function renderHome() {
   document.getElementById('silver-total-grams').textContent = formatGrams(silverTotal);
   document.getElementById('silver-total-kg').textContent = formatKg(silverTotal);
 
+  const summaryGold = document.getElementById('home-summary-gold');
+  const summarySilver = document.getElementById('home-summary-silver');
+  if (summaryGold) summaryGold.textContent = formatGrams(goldTotal);
+  if (summarySilver) summarySilver.textContent = formatGrams(silverTotal);
+
   document.getElementById('gold-month-grams').textContent = formatGrams(monthGrams('gold', ym));
   document.getElementById('silver-month-grams').textContent = formatGrams(monthGrams('silver', ym));
 
@@ -1189,13 +1203,40 @@ function normalizeMarketMetal(raw) {
   };
 }
 
-function normalizeMarketSourceBlock(raw, fallbackLabel) {
+function resolveClientDataStatus(sourceBlock) {
+  const gold = sourceBlock?.gold;
+  const silver = sourceBlock?.silver;
+  const hasAny = hasMarketMetalPrices(gold) || hasMarketMetalPrices(silver);
+  if (!hasAny) return 'unavailable';
+
+  const last = sourceBlock?.lastSuccessAt;
+  if (typeof last !== 'string') return 'stale';
+  const t = Date.parse(last);
+  if (Number.isNaN(t)) return 'stale';
+  if (Date.now() - t > MARKET_STALE_AFTER_MS) return 'stale';
+  return 'live';
+}
+
+function normalizeMarketSourceBlock(raw, fallbackLabel, feedUpdatedAt) {
   const src = raw && typeof raw === 'object' ? raw : {};
-  return {
+  const gold = normalizeMarketMetal(src.gold);
+  const silver = normalizeMarketMetal(src.silver);
+  let lastSuccessAt = typeof src.lastSuccessAt === 'string' ? src.lastSuccessAt : null;
+  if (!lastSuccessAt && (gold.sell != null || silver.sell != null) && typeof feedUpdatedAt === 'string') {
+    lastSuccessAt = feedUpdatedAt;
+  }
+  const block = {
     label: typeof src.label === 'string' && src.label.trim() ? src.label.trim() : fallbackLabel,
-    gold: normalizeMarketMetal(src.gold),
-    silver: normalizeMarketMetal(src.silver),
+    sourceName: typeof src.sourceName === 'string' && src.sourceName.trim()
+      ? src.sourceName.trim()
+      : null,
+    lastSuccessAt,
+    dataStatus: 'unavailable',
+    gold,
+    silver,
   };
+  block.dataStatus = resolveClientDataStatus(block);
+  return block;
 }
 
 function legacyMarketToSources(raw) {
@@ -1204,24 +1245,28 @@ function legacyMarketToSources(raw) {
       label: MARKET_SOURCE_LABELS.participation,
       gold: raw.gold,
       silver: raw.silver,
-    }, MARKET_SOURCE_LABELS.participation),
-    freeMarket: normalizeMarketSourceBlock(null, MARKET_SOURCE_LABELS.freeMarket),
+      lastSuccessAt: raw.updatedAt || null,
+    }, MARKET_SOURCE_LABELS.participation, raw.updatedAt),
+    freeMarket: normalizeMarketSourceBlock(null, MARKET_SOURCE_LABELS.freeMarket, null),
   };
 }
 
 function normalizeMarketFeed(raw) {
   if (!raw || typeof raw !== 'object') return null;
 
+  const feedUpdatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : null;
   let sources;
   if (raw.sources && typeof raw.sources === 'object') {
     sources = {
       participation: normalizeMarketSourceBlock(
         raw.sources.participation,
-        MARKET_SOURCE_LABELS.participation
+        MARKET_SOURCE_LABELS.participation,
+        feedUpdatedAt
       ),
       freeMarket: normalizeMarketSourceBlock(
         raw.sources.freeMarket,
-        MARKET_SOURCE_LABELS.freeMarket
+        MARKET_SOURCE_LABELS.freeMarket,
+        feedUpdatedAt
       ),
     };
   } else if (raw.gold || raw.silver) {
@@ -1231,7 +1276,7 @@ function normalizeMarketFeed(raw) {
   }
 
   return {
-    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
+    updatedAt: feedUpdatedAt,
     source: typeof raw.source === 'string' ? raw.source : 'auto',
     status: typeof raw.status === 'string' ? raw.status : 'empty',
     sources,
@@ -1249,6 +1294,7 @@ function hasMarketMetalPrices(metal) {
 
 function marketPriceText(value) {
   const n = normalizeMarketPrice(value);
+  // 0 / geçersiz → asla "0 TL" gösterme
   return n != null ? formatMarketTRY(n) : '—';
 }
 
@@ -1312,6 +1358,14 @@ function syncMarketSourcePicker() {
   });
 }
 
+function sourceFreshnessMeta(source) {
+  const status = resolveClientDataStatus(source);
+  const stamp = typeof source?.lastSuccessAt === 'string'
+    ? source.lastSuccessAt
+    : null;
+  return { status, stamp };
+}
+
 function renderLiveMarketCard() {
   const body = document.getElementById('live-market-body');
   const labelEl = document.getElementById('live-market-source-label');
@@ -1327,31 +1381,41 @@ function renderLiveMarketCard() {
   const silver = source?.silver;
   const hasGold = marketMetalSellPrice(gold) != null;
   const hasSilver = marketMetalSellPrice(silver) != null;
+  const { status, stamp } = sourceFreshnessMeta(source);
 
-  if (!hasGold && !hasSilver) {
-    body.innerHTML = '<p class="live-market-unavailable">Fiyat bilgisi alınamadı</p>';
+  if (status === 'unavailable' || (!hasGold && !hasSilver)) {
+    body.innerHTML = `
+      <p class="live-market-unavailable">Veri güncellenemedi</p>
+      <p class="live-market-updated">Fiyat bilgisi şu an yok. Kayıtların etkilenmez.</p>`;
     return;
   }
 
   const goldLine = hasGold
     ? `<p class="live-market-row">
         <span class="live-market-row-label">🥇 Gram Altın</span>
-        <span class="live-market-row-value">${escapeHtml(marketPriceText(marketMetalSellPrice(gold)))}${formatChangePercentHtml(gold?.changePercent)}</span>
+        <span class="live-market-row-value">${escapeHtml(marketPriceText(marketMetalSellPrice(gold)))}${status === 'live' ? formatChangePercentHtml(gold?.changePercent) : ''}</span>
       </p>`
     : `<p class="live-market-row live-market-row--muted"><span class="live-market-row-label">🥇 Gram Altın</span><span>—</span></p>`;
 
   const silverLine = hasSilver
     ? `<p class="live-market-row">
         <span class="live-market-row-label">🥈 Gram Gümüş</span>
-        <span class="live-market-row-value">${escapeHtml(marketPriceText(marketMetalSellPrice(silver)))}${formatChangePercentHtml(silver?.changePercent)}</span>
+        <span class="live-market-row-value">${escapeHtml(marketPriceText(marketMetalSellPrice(silver)))}${status === 'live' ? formatChangePercentHtml(silver?.changePercent) : ''}</span>
       </p>`
     : `<p class="live-market-row live-market-row--muted"><span class="live-market-row-label">🥈 Gram Gümüş</span><span>—</span></p>`;
 
-  const updatedLine = marketFeed.updatedAt
-    ? `<p class="live-market-updated">Son güncelleme: ${escapeHtml(formatMarketTimeShort(marketFeed.updatedAt))}</p>`
-    : '';
+  let footer = '';
+  if (status === 'live' && stamp) {
+    footer = `<p class="live-market-updated">Son güncelleme: ${escapeHtml(formatMarketTimeShort(stamp))}</p>`;
+  } else if (status === 'stale' && stamp) {
+    footer = `
+      <p class="live-market-stale">Son geçerli veri · ${escapeHtml(formatMarketUpdatedAt(stamp))}</p>
+      <p class="live-market-updated">Canlı güncelleme alınamadı; gösterilen son güvenilir fiyattır.</p>`;
+  } else if (status === 'stale') {
+    footer = `<p class="live-market-stale">Son geçerli veri (zaman damgası yok)</p>`;
+  }
 
-  body.innerHTML = `${goldLine}${silverLine}${updatedLine}`;
+  body.innerHTML = `${goldLine}${silverLine}${footer}`;
 }
 
 function renderTotalCardEstimates() {
@@ -1542,21 +1606,22 @@ function renderDailyNewsCard() {
   bodyEl.textContent = dailyNewsBodyText(scenario);
 }
 
-function marketDataAgeHours() {
-  if (!marketFeed.updatedAt) return null;
-  const updated = new Date(marketFeed.updatedAt);
+function marketDataAgeHours(iso) {
+  const stamp = typeof iso === 'string' ? iso : null;
+  if (!stamp) return null;
+  const updated = new Date(stamp);
   if (Number.isNaN(updated.getTime())) return null;
   return (Date.now() - updated.getTime()) / 3600000;
 }
 
-function marketStalenessWarningHtml() {
-  const ageHours = marketDataAgeHours();
-  if (ageHours == null) return '';
-  if (ageHours >= 6) {
-    return '<p class="market-stale market-stale--high">Fiyat verisi eski olabilir.</p>';
+function marketStalenessWarningHtml(source) {
+  const { status, stamp } = sourceFreshnessMeta(source || getActiveMarketSource());
+  if (status === 'unavailable') {
+    return '<p class="market-stale market-stale--high">Veri güncellenemedi.</p>';
   }
-  if (ageHours >= 2) {
-    return '<p class="market-stale">Fiyat verisi bir süredir güncellenmedi.</p>';
+  if (status === 'stale') {
+    const when = stamp ? ` · ${escapeHtml(formatMarketUpdatedAt(stamp))}` : '';
+    return `<p class="market-stale market-stale--high">Son geçerli veri${when}. Canlı gibi gösterilmiyor.</p>`;
   }
   return '';
 }
@@ -1567,17 +1632,20 @@ function renderMarketCard() {
   const m = getActiveMarketSource();
   const hasGold = hasMarketMetalPrices(m?.gold);
   const hasSilver = hasMarketMetalPrices(m?.silver);
-  const staleLine = marketStalenessWarningHtml();
+  const { status, stamp } = sourceFreshnessMeta(m);
+  const staleLine = marketStalenessWarningHtml(m);
 
   if (!body) return;
 
-  if (!hasGold && !hasSilver) {
-    body.innerHTML = `<p class="market-unavailable">Fiyat bilgisi alınamadı</p>${staleLine}`;
+  if (status === 'unavailable' || (!hasGold && !hasSilver)) {
+    body.innerHTML = `<p class="market-unavailable">Veri güncellenemedi</p>${staleLine}`;
     return;
   }
 
-  const updatedLine = marketFeed.updatedAt
-    ? `<p class="market-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(marketFeed.updatedAt))}</p>`
+  const updatedLine = stamp
+    ? (status === 'live'
+      ? `<p class="market-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(stamp))}</p>`
+      : `<p class="market-updated">Son geçerli veri: ${escapeHtml(formatMarketUpdatedAt(stamp))}</p>`)
     : '';
 
   body.innerHTML = `
@@ -1667,9 +1735,16 @@ function renderEstimatePanel() {
   const totalRow = hasTotal
     ? `<li class="estimate-row estimate-row-total"><span>Toplam Yaklaşık Değer</span><strong>${escapeHtml(formatTRY(total))}</strong></li>`
     : '';
-  const updatedLine = marketFeed.updatedAt
-    ? `<p class="estimate-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(marketFeed.updatedAt))}</p>`
-    : '';
+  const active = getActiveMarketSource();
+  const { status, stamp } = sourceFreshnessMeta(active);
+  let updatedLine = '';
+  if (stamp && status === 'live') {
+    updatedLine = `<p class="estimate-updated">Son güncelleme: ${escapeHtml(formatMarketUpdatedAt(stamp))}</p>`;
+  } else if (stamp && status === 'stale') {
+    updatedLine = `<p class="estimate-updated">Son geçerli veri: ${escapeHtml(formatMarketUpdatedAt(stamp))} (canlı değil)</p>`;
+  } else if (status === 'unavailable') {
+    updatedLine = `<p class="estimate-updated">Piyasa verisi yok; tahmini değer hesaplanamadı.</p>`;
+  }
 
   panel.innerHTML = `
     <ul class="estimate-list">
@@ -1816,6 +1891,7 @@ function switchView(view) {
   document.getElementById('home-view').classList.toggle('hidden', view !== 'home');
   document.getElementById('add-view').classList.toggle('hidden', view !== 'add');
   document.getElementById('history-view').classList.toggle('hidden', view !== 'history');
+  document.getElementById('settings-view')?.classList.toggle('hidden', view !== 'settings');
   if (view === 'home') {
     renderHome();
     if (pendingNamePrompt) {
@@ -1825,8 +1901,30 @@ function switchView(view) {
   } else if (view === 'history') {
     historyRecordsExpanded = false;
     renderHistory();
+  } else if (view === 'settings') {
+    renderSettings();
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderSettings() {
+  const versionEl = document.getElementById('settings-app-version');
+  if (versionEl) versionEl.textContent = APP_DISPLAY_VERSION;
+}
+
+function openAboutModal() {
+  const overlay = document.getElementById('about-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+  setTimeout(() => document.getElementById('about-close-btn')?.focus(), 60);
+}
+
+function closeAboutModal() {
+  const overlay = document.getElementById('about-overlay');
+  if (!overlay) return;
+  overlay.classList.add('hidden');
+  overlay.setAttribute('aria-hidden', 'true');
 }
 
 /* ---------------- Kayıt formu ---------------- */
@@ -2596,7 +2694,19 @@ document.querySelector('.market-source-picker')?.addEventListener('click', (e) =
 document.getElementById('history-records-toggle')?.addEventListener('click', toggleHistoryRecords);
 document.getElementById('edit-initial-records-btn')?.addEventListener('click', openInitialRecordsForEdit);
 document.getElementById('open-add-btn')?.addEventListener('click', openAddForm);
-document.getElementById('open-history-btn')?.addEventListener('click', () => switchView('history'));
+document.getElementById('home-summary-card')?.addEventListener('click', () => switchView('history'));
+document.getElementById('open-settings-btn')?.addEventListener('click', () => switchView('settings'));
+document.getElementById('settings-back-btn')?.addEventListener('click', () => switchView('home'));
+document.getElementById('settings-about-btn')?.addEventListener('click', openAboutModal);
+document.getElementById('about-close-btn')?.addEventListener('click', closeAboutModal);
+document.getElementById('about-overlay')?.addEventListener('click', (e) => {
+  if (e.target.id === 'about-overlay') closeAboutModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const about = document.getElementById('about-overlay');
+  if (about && !about.classList.contains('hidden')) closeAboutModal();
+});
 document.getElementById('open-onboarding-btn')?.addEventListener('click', openOnboarding);
 bindInspirationEvents();
 document.getElementById('start-card-initial-btn').addEventListener('click', () => openInitialModal());

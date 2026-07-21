@@ -1,15 +1,15 @@
 /* Gramını Büyüt — service worker (app shell cache, çevrimdışı çalışma) */
 
-const CACHE_NAME = 'gramini-buyut-v54';
+const CACHE_NAME = 'gramini-buyut-v56';
 
 // data/market.json kasıtlı olarak APP_SHELL'de değil ve fetch ile yakalanmaz.
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=46',
+  './styles.css?v=48',
   './inspiration-cards.js?v=2',
   './daily-news-messages.js?v=3',
-  './app.js?v=48',
+  './app.js?v=50',
   './manifest.webmanifest',
   './favicon.ico',
   './icons/favicon.ico',

@@ -14,7 +14,7 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=46">
+  <link rel="stylesheet" href="styles.css?v=48">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -22,13 +22,16 @@
 <body>
   <div class="app">
     <header class="header">
-      <div class="brand" id="brand-home-btn" role="button" tabindex="0" aria-label="Ana sayfaya dön">
-        <span class="brand-logo" aria-hidden="true">🌱</span>
-        <div class="brand-text">
-          <h1 class="brand-title" id="brand-title">Gramını Büyüt</h1>
-          <p class="brand-tagline">Dokunuyorsan Senindir.</p>
-          <p class="brand-greeting hidden" id="brand-greeting"></p>
+      <div class="header-row">
+        <div class="brand" id="brand-home-btn" role="button" tabindex="0" aria-label="Ana sayfaya dön">
+          <span class="brand-logo" aria-hidden="true">🌱</span>
+          <div class="brand-text">
+            <h1 class="brand-title" id="brand-title">Gramını Büyüt</h1>
+            <p class="brand-tagline">Dokunuyorsan Senindir.</p>
+            <p class="brand-greeting hidden" id="brand-greeting"></p>
+          </div>
         </div>
+        <button type="button" class="header-settings-btn" id="open-settings-btn" aria-label="Ayarlar">⚙ Ayarlar</button>
       </div>
     </header>
 
@@ -42,6 +45,23 @@
         </div>
       </div>
 
+      <button type="button" class="home-summary-card" id="home-summary-card" aria-label="Toplam Birikimim ekranını aç">
+        <div class="home-summary-head">
+          <span class="home-summary-title">Toplam Birikimim</span>
+          <span class="home-summary-chevron" aria-hidden="true">→</span>
+        </div>
+        <div class="home-summary-grid">
+          <div class="home-summary-item">
+            <span class="home-summary-label">🥇 Toplam Altın</span>
+            <span class="home-summary-value" id="home-summary-gold">0 gr</span>
+          </div>
+          <div class="home-summary-item">
+            <span class="home-summary-label">🥈 Toplam Gümüş</span>
+            <span class="home-summary-value" id="home-summary-silver">0 gr</span>
+          </div>
+        </div>
+      </button>
+
       <section class="live-market-card" id="live-market-card" aria-labelledby="live-market-title">
         <div class="live-market-head">
           <h2 class="live-market-title" id="live-market-title">Canlı Piyasa</h2>
@@ -49,7 +69,7 @@
         </div>
         <div class="market-source-picker" role="tablist" aria-label="Piyasa kaynağı">
           <button type="button" class="market-source-btn active" data-source="participation" role="tab" aria-selected="true">Katılım</button>
-          <button type="button" class="market-source-btn market-source-btn--disabled" data-source="freeMarket" role="tab" aria-selected="false" disabled aria-disabled="true">Serbest Piyasa <span class="market-source-soon">yakında</span></button>
+          <button type="button" class="market-source-btn" data-source="freeMarket" role="tab" aria-selected="false">Serbest Piyasa</button>
         </div>
         <div class="live-market-body" id="live-market-body"></div>
         <p class="live-market-disclaimer">Fiyatlar bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.</p>
@@ -88,10 +108,6 @@
           <p class="total-estimate hidden" id="silver-total-estimate"></p>
         </article>
       </section>
-
-      <div class="home-actions home-actions--primary">
-        <button type="button" class="btn btn-ghost btn-block" id="open-history-btn">📊 Toplam Birikimim</button>
-      </div>
 
       <section class="purity-strip" id="gold-purity-strip">
         <span class="purity-strip-label">🥇 Altın ayar kırılımı</span>
@@ -164,6 +180,24 @@
           <a href="./legal-notice.html">Yasal Uyarı</a>
         </nav>
       </footer>
+    </main>
+
+    <!-- AYARLAR -->
+    <main class="view hidden" id="settings-view">
+      <button type="button" class="btn-back" id="settings-back-btn"><span aria-hidden="true">←</span> Panoma Dön</button>
+      <section class="card settings-card">
+        <h2 class="card-title">Ayarlar</h2>
+        <p class="card-desc">Uygulama bilgileri ve yasal sayfalar.</p>
+        <div class="settings-list" role="list">
+          <div class="settings-row" role="listitem">
+            <span class="settings-row-label">Uygulama Sürümü</span>
+            <span class="settings-row-value" id="settings-app-version">—</span>
+          </div>
+          <a class="settings-link" role="listitem" href="./privacy-policy.html">Gizlilik Politikası</a>
+          <a class="settings-link" role="listitem" href="./legal-notice.html">Yasal Uyarı</a>
+          <button type="button" class="settings-link settings-link-btn" id="settings-about-btn" role="listitem">Uygulama Hakkında</button>
+        </div>
+      </section>
     </main>
 
     <!-- KAYIT EKLE / DÜZENLE -->
@@ -447,11 +481,22 @@
       </div>
     </div>
 
+    <!-- UYGULAMA HAKKINDA -->
+    <div id="about-overlay" class="modal-overlay hidden" aria-hidden="true">
+      <div class="modal about-modal" role="dialog" aria-modal="true" aria-labelledby="about-title">
+        <h2 class="modal-title" id="about-title">Uygulama Hakkında</h2>
+        <p class="modal-lead">Gramını Büyüt; fiziksel altın ve gümüş birikimini gram bazında sade şekilde takip etmen için tasarlandı.</p>
+        <p class="about-text">Bu bir kâr-zarar veya borsa uygulaması değildir. Amaç, birikimini görmek ve düzenli tutmaktır.</p>
+        <p class="about-signoff">Dokunuyorsan Senindir. 🥇🥈</p>
+        <button type="button" class="btn btn-primary btn-block" id="about-close-btn">Kapat</button>
+      </div>
+    </div>
+
     <div id="toast" class="toast hidden"></div>
   </div>
 
   <script src="inspiration-cards.js?v=2"></script>
   <script src="daily-news-messages.js?v=3"></script>
-  <script src="app.js?v=48"></script>
+  <script src="app.js?v=50"></script>
 </body>
 </html>

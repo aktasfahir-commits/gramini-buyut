@@ -1,9 +1,9 @@
 name: Update market data
 
+# Scheduled workflows yalnızca repo default branch'indeki workflow dosyasından çalışır (main).
 on:
   schedule:
-    # Hafta içi her 30 dakikada bir (UTC)
-    - cron: '*/30 * * * 1-5'
+    - cron: "*/30 * * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -17,25 +17,71 @@ jobs:
   update-market:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Fetch and write market.json
-        run: node scripts/update-market.js
-
-      - name: Commit market.json if changed
+        id: fetch_market
         run: |
+          set -euo pipefail
+          echo "Workflow tetiklendi: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          node scripts/update-market.js
+          echo "market.json updatedAt:"
+          node -e "const m=require('./data/market.json'); console.log(m.updatedAt || '(yok)'); console.log('status:', m.status);"
+
+      - name: Commit and push market.json
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market.json
-          if git diff --staged --quiet; then
-            echo "market.json değişmedi."
-          else
-            git commit -m "chore: güncel market.json"
-            git push
+
+          if [ ! -f data/market.json ]; then
+            echo "::error::data/market.json bulunamadı."
+            exit 1
           fi
+
+          git add data/market.json
+
+          if git diff --staged --quiet; then
+            echo "market.json değişmedi — commit/push gerekmiyor (idempotent)."
+            exit 0
+          fi
+
+          git commit -m "chore: güncel market.json"
+
+          # Remote main bu job sırasında ilerlemiş olabilir (manuel push / deploy / başka commit).
+          # Force push YOK: fetch + rebase + push; non-fast-forward olursa yeniden dene.
+          MAX_ATTEMPTS=5
+          attempt=1
+          while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
+            echo "Push denemesi ${attempt}/${MAX_ATTEMPTS}…"
+            git fetch origin main
+
+            if ! git rebase origin/main; then
+              echo "::error::origin/main üzerine rebase başarısız (muhtemel market.json çakışması)."
+              git rebase --abort || true
+              exit 1
+            fi
+
+            if git push origin HEAD:main; then
+              echo "market.json main branch'e push edildi."
+              exit 0
+            fi
+
+            echo "Push reddedildi (remote ileride). Force yok — yeniden fetch/rebase denenecek."
+            attempt=$((attempt + 1))
+            sleep $((attempt * 2))
+          done
+
+          echo "::error::market.json push ${MAX_ATTEMPTS} denemede başarısız (non-fast-forward)."
+          exit 1

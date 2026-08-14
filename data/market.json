@@ -1,12 +1,12 @@
 {
-  "updatedAt": "2026-08-14T21:47:20.707Z",
+  "updatedAt": "2026-08-14T22:14:52.971Z",
   "source": "auto",
   "status": "ok",
   "sources": {
     "participation": {
       "label": "Katılım",
       "sourceName": "Dünya Katılım referans kuru",
-      "lastSuccessAt": "2026-08-14T21:47:20.707Z",
+      "lastSuccessAt": "2026-08-14T22:14:52.971Z",
       "dataStatus": "live",
       "gold": {
         "buy": 6662.65,
@@ -22,7 +22,7 @@
     "freeMarket": {
       "label": "Serbest Piyasa",
       "sourceName": "Serbest Piyasa referansı",
-      "lastSuccessAt": "2026-08-14T21:47:20.707Z",
+      "lastSuccessAt": "2026-08-14T22:14:52.971Z",
       "dataStatus": "live",
       "gold": {
         "buy": 6736.33,

@@ -1,38 +1,38 @@
 {
-  "updatedAt": "2026-08-21T12:31:24.482Z",
+  "updatedAt": "2026-08-21T13:39:02.586Z",
   "source": "auto",
   "status": "ok",
   "sources": {
     "participation": {
       "label": "Katılım",
       "sourceName": "Dünya Katılım referans kuru",
-      "lastSuccessAt": "2026-08-21T12:31:24.482Z",
+      "lastSuccessAt": "2026-08-21T13:39:02.586Z",
       "dataStatus": "live",
       "gold": {
-        "buy": 7004.09,
-        "sell": 7037.56,
-        "changePercent": -0.4
+        "buy": 7015.75,
+        "sell": 7049.31,
+        "changePercent": 0.17
       },
       "silver": {
-        "buy": 106.58,
-        "sell": 107.13,
-        "changePercent": -0.7
+        "buy": 106.86,
+        "sell": 107.41,
+        "changePercent": 0.26
       }
     },
     "freeMarket": {
       "label": "Serbest Piyasa",
       "sourceName": "Serbest Piyasa referansı",
-      "lastSuccessAt": "2026-08-21T12:31:24.482Z",
+      "lastSuccessAt": "2026-08-21T13:39:02.586Z",
       "dataStatus": "live",
       "gold": {
-        "buy": 7079.86,
-        "sell": 7080.82,
-        "changePercent": -0.37
+        "buy": 7091.14,
+        "sell": 7092.04,
+        "changePercent": 0.16
       },
       "silver": {
-        "buy": 107.17,
-        "sell": 107.26,
-        "changePercent": -0.73
+        "buy": 107.46,
+        "sell": 107.55,
+        "changePercent": 0.27
       }
     }
   }
